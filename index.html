@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>キャラクター構想管理システム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ログイン画面 -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-container">
+            <h1>🎭 ログイン</h1>
+            <p>キャラクター構想管理システム</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>ユーザー名</label>
+                    <input type="text" id="login-username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>パスワード</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">ログイン</button>
+                <p id="login-error" class="login-error"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- メインアプリ（ログイン後に表示） -->
+    <div id="app-container" style="display: none;">
+        <div class="container">
+            <header>
+                <h1>🎭 キャラクター構想管理システム</h1>
+            </header>
+
+            <!-- タブナビゲーション -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="parts">パーツ管理</button>
+                <button class="tab-btn" data-tab="characters">キャラクター管理</button>
+            </div>
+
+            <!-- パーツ管理画面 -->
+            <div id="parts-section" class="tab-content active">
+                <div class="section-header">
+                    <h2>パーツ管理</h2>
+                    <button id="add-part-btn" class="btn-primary">+ 新規パーツ作成</button>
+                </div>
+
+                <!-- パーツ種別タブ -->
+                <div class="part-type-tabs">
+                    <button class="part-type-btn active" data-type="all">すべて</button>
+                    <button class="part-type-btn" data-type="appearance">容姿</button>
+                    <button class="part-type-btn" data-type="personality">性格</button>
+                    <button class="part-type-btn" data-type="behavior">行動</button>
+                    <button class="part-type-btn" data-type="age">年代</button>
+                    <button class="part-type-btn" data-type="restriction">制限</button>
+                    <button class="part-type-btn" data-type="other">その他</button>
+                </div>
+
+                <div id="parts-list" class="parts-list">
+                    <!-- パーツ一覧がここに表示される -->
+                </div>
+            </div>
+
+            <!-- キャラクター管理画面 -->
+            <div id="characters-section" class="tab-content">
+                <div class="section-header">
+                    <h2>キャラクター管理</h2>
+                    <button id="add-character-btn" class="btn-primary">+ 新規キャラクター作成</button>
+                </div>
+
+                <div id="characters-list" class="characters-list">
+                    <!-- キャラクター一覧がここに表示される -->
+                </div>
+            </div>
+        </div>
+
+        <!-- パーツ作成/編集モーダル -->
+        <div id="part-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="part-modal-title">パーツ作成</h2>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="part-form">
+                    <div class="form-group">
+                        <label>種別 *</label>
+                        <select id="part-type" required>
+                            <option value="">選択してください</option>
+                            <option value="appearance">容姿</option>
+                            <option value="personality">性格</option>
+                            <option value="behavior">行動</option>
+                            <option value="age">年代</option>
+                            <option value="restriction">制限</option>
+                            <option value="other">その他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>名前 *</label>
+                        <input type="text" id="part-name" required placeholder="例: 黒髪ロング">
+                    </div>
+                    <div class="form-group">
+                        <label>説明</label>
+                        <textarea id="part-description" rows="3" placeholder="詳細な説明（任意）"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary cancel-btn">キャンセル</button>
+                        <button type="submit" class="btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- キャラクター作成/編集モーダル -->
+        <div id="character-modal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2 id="character-modal-title">キャラクター作成</h2>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="character-form">
+                    <div class="form-group">
+                        <label>キャラクター名 *</label>
+                        <input type="text" id="character-name" required placeholder="例: 勇者アレックス">
+                    </div>
+
+                    <div class="form-group">
+                        <label>容姿（1つ選択）</label>
+                        <select id="character-appearance">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>性格（1つ選択）</label>
+                        <select id="character-personality">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>年代（1つ選択）</label>
+                        <select id="character-age">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>行動（複数選択可）</label>
+                        <div id="character-behaviors" class="multi-select">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>制限（複数選択可）</label>
+                        <div id="character-restrictions" class="multi-select">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>その他（複数選択可）</label>
+                        <div id="character-others" class="multi-select">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary cancel-btn">キャンセル</button>
+                        <button type="submit" class="btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div> <!-- app-containerの閉じタグ -->
+    <script src="app.js"></script>
+</body>
+</html>
