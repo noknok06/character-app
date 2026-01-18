@@ -1,199 +1,560 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>キャラクター構想管理システム</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>キャラクター管理</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #a5b4fc;
+      --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-secondary: #64748b;
+      --border: #e2e8f0; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: calc(70px + var(--safe-bottom)); overflow-x: hidden; }
+    
+    /* ヘッダー */
+    .header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--primary); color: white; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.15); }
+    
+    /* メインコンテンツ */
+    .main { padding-top: calc(64px + env(safe-area-inset-top)); padding-bottom: 80px; }
+    .screen { display: none; animation: fadeIn 0.2s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* 検索バー */
+    .search-bar { padding: 12px 16px; position: sticky; top: calc(64px + env(safe-area-inset-top)); background: var(--bg); z-index: 50; }
+    .search-input { width: 100%; padding: 12px 16px 12px 44px; border: none; border-radius: 12px; background: var(--card); font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .search-input:focus { outline: 2px solid var(--primary); }
+    .search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+    
+    /* フィルターチップ */
+    .filter-chips { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .chip { padding: 8px 16px; border-radius: 20px; background: var(--card); border: 1.5px solid var(--border); font-size: 14px; white-space: nowrap; transition: all 0.2s; }
+    .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+    
+    /* カードリスト */
+    .card-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+    .card { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-title { font-size: 17px; font-weight: 600; }
+    .card-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+    .badge-appearance { background: #fce7f3; color: #be185d; }
+    .badge-personality { background: #dbeafe; color: #1d4ed8; }
+    .badge-behavior { background: #fef3c7; color: #b45309; }
+    .badge-age { background: #ede9fe; color: #6d28d9; }
+    .badge-restriction { background: #fee2e2; color: #dc2626; }
+    .badge-other { background: #e5e7eb; color: #4b5563; }
+    .card-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+    .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .card-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-edit { background: #fef3c7; color: #b45309; }
+    .btn-delete { background: #fee2e2; color: #dc2626; }
+    .btn-detail { background: #dbeafe; color: #1d4ed8; }
+    .btn-copy { background: #d1fae5; color: #059669; }
+    
+    /* キャラクターカードのパーツ表示 */
+    .char-parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .char-tag { padding: 4px 10px; background: var(--bg); border-radius: 8px; font-size: 12px; color: var(--text-secondary); }
+    
+    /* ボトムナビゲーション */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: var(--safe-bottom); z-index: 100; }
+    .nav-item { flex: 1; padding: 12px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-secondary); text-decoration: none; font-size: 11px; transition: color 0.2s; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item i { font-size: 22px; }
+    
+    /* FAB */
+    .fab { position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 90; transition: transform 0.2s, box-shadow 0.2s; }
+    .fab:active { transform: scale(0.95); }
+    
+    /* ボトムシート */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; opacity: 0; visibility: hidden; transition: all 0.3s; }
+    .overlay.active { opacity: 1; visibility: visible; }
+    .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-radius: 24px 24px 0 0; z-index: 201; transform: translateY(100%); transition: transform 0.3s ease; max-height: 90vh; display: flex; flex-direction: column; }
+    .bottom-sheet.active { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto; }
+    .sheet-header { padding: 0 20px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .sheet-title { font-size: 18px; font-weight: 600; }
+    .sheet-close { width: 32px; height: 32px; border: none; background: var(--bg); border-radius: 50%; font-size: 18px; color: var(--text-secondary); }
+    .sheet-body { padding: 20px; overflow-y: auto; flex: 1; padding-bottom: calc(20px + var(--safe-bottom)); }
+    
+    /* フォーム */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--text); }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 16px; background: var(--card); transition: border-color 0.2s; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+    .form-textarea { resize: none; min-height: 100px; }
+    
+    /* チェックボックスリスト */
+    .checkbox-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px; }
+    .checkbox-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 10px; }
+    .checkbox-item input { width: 20px; height: 20px; accent-color: var(--primary); }
+    
+    /* ボタン */
+    .btn-primary { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; margin-top: 10px; }
+    .btn-primary:active { background: var(--primary-dark); }
+    
+    /* 空状態 */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state p { font-size: 15px; }
+    
+    /* ログイン画面 */
+    .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
+    .login-box { background: white; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 360px; }
+    .login-logo { text-align: center; font-size: 48px; margin-bottom: 8px; }
+    .login-title { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 24px; }
+    .login-error { color: var(--danger); font-size: 14px; text-align: center; margin-top: 12px; min-height: 20px; }
+    
+    /* 詳細表示 */
+    .detail-text { width: 100%; min-height: 300px; padding: 16px; background: var(--bg); border: none; border-radius: 12px; font-family: monospace; font-size: 14px; line-height: 1.6; resize: none; }
+    
+    /* トースト */
+    .toast { position: fixed; bottom: calc(100px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(100px); background: var(--text); color: white; padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 300; opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
 </head>
 <body>
-
-    <!-- ログイン画面 -->
-    <div id="login-screen" class="login-screen">
-        <div class="login-container">
-            <h1>🎭 ログイン</h1>
-            <p>キャラクター構想管理システム</p>
-            <form id="login-form">
-                <div class="form-group">
-                    <label>ユーザー名</label>
-                    <input type="text" id="login-username" required autofocus>
-                </div>
-                <div class="form-group">
-                    <label>パスワード</label>
-                    <input type="password" id="login-password" required>
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">ログイン</button>
-                <p id="login-error" class="login-error"></p>
-            </form>
+  <!-- ログイン画面 -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <div class="login-logo">🎭</div>
+      <h1 class="login-title">キャラクター管理</h1>
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label">ユーザー名</label>
+          <input type="text" class="form-input" id="loginUser" required>
         </div>
+        <div class="form-group">
+          <label class="form-label">パスワード</label>
+          <input type="password" class="form-input" id="loginPass" required>
+        </div>
+        <button type="submit" class="btn-primary">ログイン</button>
+        <p class="login-error" id="loginError"></p>
+      </form>
     </div>
+  </div>
 
-    <!-- メインアプリ（ログイン後に表示） -->
-    <div id="app-container" style="display: none;">
-        <div class="container">
-            <header>
-                <h1>🎭 キャラクター構想管理システム</h1>
-            </header>
+  <!-- メインアプリ -->
+  <div id="app" style="display:none;">
+    <header class="header">
+      <h1>🎭 キャラクター管理</h1>
+      <div class="header-icon"><i class="fas fa-user"></i></div>
+    </header>
 
-            <!-- タブナビゲーション -->
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="parts">パーツ管理</button>
-                <button class="tab-btn" data-tab="characters">キャラクター管理</button>
-            </div>
-
-            <!-- パーツ管理画面 -->
-            <div id="parts-section" class="tab-content active">
-                <div class="section-header">
-                    <h2>パーツ管理</h2>
-                    <button id="add-part-btn" class="btn-primary">+ 新規パーツ作成</button>
-                </div>
-
-                <!-- パーツ種別タブ -->
-                <div class="part-type-tabs">
-                    <button class="part-type-btn active" data-type="all">すべて</button>
-                    <button class="part-type-btn" data-type="appearance">容姿</button>
-                    <button class="part-type-btn" data-type="personality">性格</button>
-                    <button class="part-type-btn" data-type="behavior">行動</button>
-                    <button class="part-type-btn" data-type="age">年代</button>
-                    <button class="part-type-btn" data-type="restriction">制限</button>
-                    <button class="part-type-btn" data-type="other">その他</button>
-                </div>
-
-                <div id="parts-list" class="parts-list">
-                    <!-- パーツ一覧がここに表示される -->
-                </div>
-            </div>
-
-            <!-- キャラクター管理画面 -->
-            <div id="characters-section" class="tab-content">
-                <div class="section-header">
-                    <h2>キャラクター管理</h2>
-                    <button id="add-character-btn" class="btn-primary">+ 新規キャラクター作成</button>
-                </div>
-
-                <div id="characters-list" class="characters-list">
-                    <!-- キャラクター一覧がここに表示される -->
-                </div>
-            </div>
+    <main class="main">
+      <!-- パーツ画面 -->
+      <div class="screen active" id="partsScreen">
+        <div class="search-bar">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" class="search-input" placeholder="パーツを検索..." id="partsSearch">
         </div>
-
-        <!-- パーツ作成/編集モーダル -->
-        <div id="part-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="part-modal-title">パーツ作成</h2>
-                    <button class="close-btn">&times;</button>
-                </div>
-                <form id="part-form">
-                    <div class="form-group">
-                        <label>種別 *</label>
-                        <select id="part-type" required>
-                            <option value="">選択してください</option>
-                            <option value="appearance">容姿</option>
-                            <option value="personality">性格</option>
-                            <option value="behavior">行動</option>
-                            <option value="age">年代</option>
-                            <option value="restriction">制限</option>
-                            <option value="other">その他</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>名前 *</label>
-                        <input type="text" id="part-name" required placeholder="例: 黒髪ロング">
-                    </div>
-                    <div class="form-group">
-                        <label>説明</label>
-                        <textarea id="part-description" rows="3" placeholder="詳細な説明（任意）"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary cancel-btn">キャンセル</button>
-                        <button type="submit" class="btn-primary">保存</button>
-                    </div>
-                </form>
-            </div>
+        <div class="filter-chips" id="partFilters">
+          <button class="chip active" data-type="all">すべて</button>
+          <button class="chip" data-type="appearance">容姿</button>
+          <button class="chip" data-type="personality">性格</button>
+          <button class="chip" data-type="behavior">行動</button>
+          <button class="chip" data-type="age">年代</button>
+          <button class="chip" data-type="restriction">制限</button>
+          <button class="chip" data-type="other">その他</button>
         </div>
+        <div class="card-list" id="partsList"></div>
+      </div>
 
-        <!-- キャラクター作成/編集モーダル -->
-        <div id="character-modal" class="modal">
-            <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <h2 id="character-modal-title">キャラクター作成</h2>
-                    <button class="close-btn">&times;</button>
-                </div>
-                <form id="character-form">
-                    <div class="form-group">
-                        <label>キャラクター名 *</label>
-                        <input type="text" id="character-name" required placeholder="例: 勇者アレックス">
-                    </div>
-
-                    <div class="form-group">
-                        <label>容姿（1つ選択）</label>
-                        <select id="character-appearance">
-                            <option value="">選択してください</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>性格（1つ選択）</label>
-                        <select id="character-personality">
-                            <option value="">選択してください</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>年代（1つ選択）</label>
-                        <select id="character-age">
-                            <option value="">選択してください</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>行動（複数選択可）</label>
-                        <div id="character-behaviors" class="multi-select">
-                            <!-- 動的に生成 -->
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>制限（複数選択可）</label>
-                        <div id="character-restrictions" class="multi-select">
-                            <!-- 動的に生成 -->
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>その他（複数選択可）</label>
-                        <div id="character-others" class="multi-select">
-                            <!-- 動的に生成 -->
-                        </div>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary cancel-btn">キャンセル</button>
-                        <button type="submit" class="btn-primary">保存</button>
-                    </div>
-                </form>
-            </div>
+      <!-- キャラクター画面 -->
+      <div class="screen" id="charsScreen">
+        <div class="search-bar">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" class="search-input" placeholder="キャラクターを検索..." id="charsSearch">
         </div>
-    <!-- キャラクター詳細モーダル -->
-    <div id="character-detail-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="character-detail-title">キャラクター詳細</h2>
-                <button class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <textarea id="character-detail-text" readonly rows="20"></textarea>
-                <div class="modal-actions">
-                    <button id="copy-character-btn" class="btn-primary">
-                        📋 テキストをコピー
-                    </button>
-                    <button class="btn-secondary cancel-btn">閉じる</button>
-                </div>
-            </div>
+        <div class="card-list" id="charsList"></div>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <button class="fab" id="fabBtn"><i class="fas fa-plus"></i></button>
+
+    <!-- ボトムナビ -->
+    <nav class="bottom-nav">
+      <a href="#" class="nav-item active" data-screen="parts"><i class="fas fa-puzzle-piece"></i><span>パーツ</span></a>
+      <a href="#" class="nav-item" data-screen="chars"><i class="fas fa-users"></i><span>キャラ</span></a>
+    </nav>
+  </div>
+
+  <!-- オーバーレイ -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- パーツ作成シート -->
+  <div class="bottom-sheet" id="partSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title" id="partSheetTitle">パーツ作成</span>
+      <button class="sheet-close" onclick="closeSheet('partSheet')">×</button>
+    </div>
+    <div class="sheet-body">
+      <form id="partForm">
+        <div class="form-group">
+          <label class="form-label">種別</label>
+          <select class="form-select" id="partType" required>
+            <option value="">選択してください</option>
+            <option value="appearance">容姿</option>
+            <option value="personality">性格</option>
+            <option value="behavior">行動</option>
+            <option value="age">年代</option>
+            <option value="restriction">制限</option>
+            <option value="other">その他</option>
+          </select>
         </div>
-    </div>        
-    </div> <!-- app-containerの閉じタグ -->
-    <script src="app.js"></script>
+        <div class="form-group">
+          <label class="form-label">名前</label>
+          <input type="text" class="form-input" id="partName" required placeholder="例: 黒髪ロング">
+        </div>
+        <div class="form-group">
+          <label class="form-label">説明（任意）</label>
+          <textarea class="form-textarea" id="partDesc" placeholder="詳細な説明"></textarea>
+        </div>
+        <button type="submit" class="btn-primary">保存</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- キャラ作成シート -->
+  <div class="bottom-sheet" id="charSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title" id="charSheetTitle">キャラクター作成</span>
+      <button class="sheet-close" onclick="closeSheet('charSheet')">×</button>
+    </div>
+    <div class="sheet-body">
+      <form id="charForm">
+        <div class="form-group">
+          <label class="form-label">キャラクター名</label>
+          <input type="text" class="form-input" id="charName" required placeholder="例: 勇者アレックス">
+        </div>
+        <div class="form-group">
+          <label class="form-label">容姿</label>
+          <select class="form-select" id="charAppearance"><option value="">選択してください</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">性格</label>
+          <select class="form-select" id="charPersonality"><option value="">選択してください</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">年代</label>
+          <select class="form-select" id="charAge"><option value="">選択してください</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">行動（複数可）</label>
+          <div class="checkbox-list" id="charBehaviors"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">制限（複数可）</label>
+          <div class="checkbox-list" id="charRestrictions"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">その他（複数可）</label>
+          <div class="checkbox-list" id="charOthers"></div>
+        </div>
+        <button type="submit" class="btn-primary">保存</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 詳細シート -->
+  <div class="bottom-sheet" id="detailSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title" id="detailTitle">詳細</span>
+      <button class="sheet-close" onclick="closeSheet('detailSheet')">×</button>
+    </div>
+    <div class="sheet-body">
+      <textarea class="detail-text" id="detailText" readonly></textarea>
+      <button class="btn-primary" onclick="copyDetail()"><i class="fas fa-copy"></i> コピー</button>
+    </div>
+  </div>
+
+  <!-- トースト -->
+  <div class="toast" id="toast"></div>
+
+<script>
+const API_BASE_URL = 'https://5moouwqlbi.execute-api.ap-northeast-1.amazonaws.com/prod';
+let authHeader = '', allParts = [], allCharacters = [], currentFilter = 'all', currentScreen = 'parts', editingPartId = null, editingCharacterId = null;
+
+// 初期化
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const user = document.getElementById('loginUser').value;
+  const pass = document.getElementById('loginPass').value;
+  authHeader = 'Basic ' + btoa(user + ':' + pass);
+  try {
+    const res = await fetch(`${API_BASE_URL}/parts`, { headers: { 'Authorization': authHeader } });
+    if (res.ok) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initApp();
+    } else {
+      document.getElementById('loginError').textContent = '認証エラー';
+      authHeader = '';
+    }
+  } catch { document.getElementById('loginError').textContent = '接続エラー'; authHeader = ''; }
+});
+
+async function initApp() {
+  await Promise.all([loadParts(), loadCharacters()]);
+  renderParts(); renderCharacters();
+  setupEvents();
+}
+
+function setupEvents() {
+  document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    n.classList.add('active');
+    currentScreen = n.dataset.screen;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(currentScreen + 'Screen').classList.add('active');
+  }));
+  
+  document.querySelectorAll('#partFilters .chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('#partFilters .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    currentFilter = c.dataset.type;
+    renderParts();
+  }));
+  
+  document.getElementById('partsSearch').addEventListener('input', renderParts);
+  document.getElementById('charsSearch').addEventListener('input', renderCharacters);
+  document.getElementById('fabBtn').addEventListener('click', () => {
+    if (currentScreen === 'parts') openPartSheet();
+    else openCharSheet();
+  });
+  document.getElementById('overlay').addEventListener('click', closeAllSheets);
+  document.getElementById('partForm').addEventListener('submit', handlePartSubmit);
+  document.getElementById('charForm').addEventListener('submit', handleCharSubmit);
+}
+
+async function loadParts() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/parts`, { headers: { 'Authorization': authHeader } });
+    const data = await res.json();
+    allParts = data.parts || [];
+  } catch (e) { console.error(e); }
+}
+
+async function loadCharacters() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/characters`, { headers: { 'Authorization': authHeader } });
+    const data = await res.json();
+    allCharacters = data.characters || [];
+  } catch (e) { console.error(e); }
+}
+
+function renderParts() {
+  const search = document.getElementById('partsSearch').value.toLowerCase();
+  let filtered = allParts;
+  if (currentFilter !== 'all') filtered = filtered.filter(p => p.PartType === currentFilter);
+  if (search) filtered = filtered.filter(p => p.Name.toLowerCase().includes(search) || (p.Description || '').toLowerCase().includes(search));
+  
+  const container = document.getElementById('partsList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-puzzle-piece"></i><p>パーツがありません</p></div>';
+    return;
+  }
+  container.innerHTML = filtered.map(p => `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">${esc(p.Name)}</span>
+        <span class="card-badge badge-${p.PartType}">${typeLabel(p.PartType)}</span>
+      </div>
+      ${p.Description ? `<p class="card-desc">${esc(p.Description)}</p>` : ''}
+      <div class="card-actions">
+        <button class="card-btn btn-edit" onclick="editPart('${p.PartID}')"><i class="fas fa-edit"></i> 編集</button>
+        <button class="card-btn btn-delete" onclick="deletePart('${p.PartID}')"><i class="fas fa-trash"></i> 削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCharacters() {
+  const search = document.getElementById('charsSearch').value.toLowerCase();
+  let filtered = allCharacters;
+  if (search) filtered = filtered.filter(c => c.CharacterName.toLowerCase().includes(search));
+  
+  const container = document.getElementById('charsList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>キャラクターがありません</p></div>';
+    return;
+  }
+  container.innerHTML = filtered.map(c => {
+    const parts = c.parts || {};
+    let tags = '';
+    if (parts.Appearance) tags += `<span class="char-tag">${esc(parts.Appearance.Name)}</span>`;
+    if (parts.Personality) tags += `<span class="char-tag">${esc(parts.Personality.Name)}</span>`;
+    if (parts.Age) tags += `<span class="char-tag">${esc(parts.Age.Name)}</span>`;
+    return `
+      <div class="card">
+        <div class="card-header"><span class="card-title">${esc(c.CharacterName)}</span></div>
+        <div class="char-parts">${tags}</div>
+        <div class="card-actions">
+          <button class="card-btn btn-detail" onclick="showDetail('${c.CharacterID}')"><i class="fas fa-eye"></i></button>
+          <button class="card-btn btn-copy" onclick="copyChar('${c.CharacterID}')"><i class="fas fa-copy"></i></button>
+          <button class="card-btn btn-edit" onclick="editChar('${c.CharacterID}')"><i class="fas fa-edit"></i></button>
+          <button class="card-btn btn-delete" onclick="deleteChar('${c.CharacterID}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openPartSheet(id = null) {
+  editingPartId = id;
+  document.getElementById('partForm').reset();
+  document.getElementById('partSheetTitle').textContent = id ? 'パーツ編集' : 'パーツ作成';
+  if (id) {
+    const p = allParts.find(x => x.PartID === id);
+    if (p) {
+      document.getElementById('partType').value = p.PartType;
+      document.getElementById('partName').value = p.Name;
+      document.getElementById('partDesc').value = p.Description || '';
+    }
+  }
+  openSheet('partSheet');
+}
+
+function openCharSheet(id = null) {
+  editingCharacterId = id;
+  document.getElementById('charForm').reset();
+  document.getElementById('charSheetTitle').textContent = id ? 'キャラクター編集' : 'キャラクター作成';
+  populateCharSelects();
+  if (id) {
+    const c = allCharacters.find(x => x.CharacterID === id);
+    if (c) {
+      document.getElementById('charName').value = c.CharacterName;
+      document.getElementById('charAppearance').value = c.AppearancePartID || '';
+      document.getElementById('charPersonality').value = c.PersonalityPartID || '';
+      document.getElementById('charAge').value = c.AgePartID || '';
+      (c.BehaviorPartIDs || []).forEach(i => { const cb = document.querySelector(`#charBehaviors input[value="${i}"]`); if (cb) cb.checked = true; });
+      (c.RestrictionPartIDs || []).forEach(i => { const cb = document.querySelector(`#charRestrictions input[value="${i}"]`); if (cb) cb.checked = true; });
+      (c.OtherPartIDs || []).forEach(i => { const cb = document.querySelector(`#charOthers input[value="${i}"]`); if (cb) cb.checked = true; });
+    }
+  }
+  openSheet('charSheet');
+}
+
+function populateCharSelects() {
+  ['charAppearance', 'charPersonality', 'charAge'].forEach((id, i) => {
+    const types = ['appearance', 'personality', 'age'];
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">選択してください</option>' + allParts.filter(p => p.PartType === types[i]).map(p => `<option value="${p.PartID}">${esc(p.Name)}</option>`).join('');
+  });
+  ['charBehaviors:behavior', 'charRestrictions:restriction', 'charOthers:other'].forEach(s => {
+    const [id, type] = s.split(':');
+    const div = document.getElementById(id);
+    const parts = allParts.filter(p => p.PartType === type);
+    div.innerHTML = parts.length ? parts.map(p => `<label class="checkbox-item"><input type="checkbox" value="${p.PartID}">${esc(p.Name)}</label>`).join('') : '<p style="color:var(--text-secondary);font-size:13px;">パーツがありません</p>';
+  });
+}
+
+function openSheet(id) {
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+function closeSheet(id) {
+  document.getElementById('overlay').classList.remove('active');
+  document.getElementById(id).classList.remove('active');
+}
+
+function closeAllSheets() {
+  document.getElementById('overlay').classList.remove('active');
+  document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+}
+
+async function handlePartSubmit(e) {
+  e.preventDefault();
+  const data = { PartType: document.getElementById('partType').value, Name: document.getElementById('partName').value, Description: document.getElementById('partDesc').value };
+  try {
+    const url = editingPartId ? `${API_BASE_URL}/parts/${editingPartId}` : `${API_BASE_URL}/parts`;
+    const method = editingPartId ? 'PUT' : 'POST';
+    await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(data) });
+    await loadParts(); renderParts(); closeAllSheets();
+    toast(editingPartId ? '更新しました' : '作成しました');
+  } catch { toast('エラーが発生しました'); }
+}
+
+async function handleCharSubmit(e) {
+  e.preventDefault();
+  const data = {
+    CharacterName: document.getElementById('charName').value,
+    AppearancePartID: document.getElementById('charAppearance').value,
+    PersonalityPartID: document.getElementById('charPersonality').value,
+    AgePartID: document.getElementById('charAge').value,
+    BehaviorPartIDs: [...document.querySelectorAll('#charBehaviors input:checked')].map(c => c.value),
+    RestrictionPartIDs: [...document.querySelectorAll('#charRestrictions input:checked')].map(c => c.value),
+    OtherPartIDs: [...document.querySelectorAll('#charOthers input:checked')].map(c => c.value)
+  };
+  try {
+    const url = editingCharacterId ? `${API_BASE_URL}/characters/${editingCharacterId}` : `${API_BASE_URL}/characters`;
+    const method = editingCharacterId ? 'PUT' : 'POST';
+    await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(data) });
+    await loadCharacters(); renderCharacters(); closeAllSheets();
+    toast(editingCharacterId ? '更新しました' : '作成しました');
+  } catch { toast('エラーが発生しました'); }
+}
+
+function editPart(id) { openPartSheet(id); }
+function editChar(id) { openCharSheet(id); }
+
+async function deletePart(id) {
+  if (!confirm('削除しますか？')) return;
+  await fetch(`${API_BASE_URL}/parts/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
+  await loadParts(); renderParts(); toast('削除しました');
+}
+
+async function deleteChar(id) {
+  if (!confirm('削除しますか？')) return;
+  await fetch(`${API_BASE_URL}/characters/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
+  await loadCharacters(); renderCharacters(); toast('削除しました');
+}
+
+function showDetail(id) {
+  const c = allCharacters.find(x => x.CharacterID === id);
+  if (!c) return;
+  document.getElementById('detailTitle').textContent = c.CharacterName;
+  document.getElementById('detailText').value = genCharText(c);
+  openSheet('detailSheet');
+}
+
+function copyChar(id) {
+  const c = allCharacters.find(x => x.CharacterID === id);
+  if (!c) return;
+  navigator.clipboard.writeText(genCharText(c)).then(() => toast('コピーしました'));
+}
+
+function copyDetail() {
+  navigator.clipboard.writeText(document.getElementById('detailText').value).then(() => toast('コピーしました'));
+}
+
+function genCharText(c) {
+  const p = c.parts || {};
+  let t = `# ${c.CharacterName}\n\n`;
+  if (p.Appearance) t += `## 容姿\n${p.Appearance.Name}${p.Appearance.Description ? ' - ' + p.Appearance.Description : ''}\n\n`;
+  if (p.Personality) t += `## 性格\n${p.Personality.Name}${p.Personality.Description ? ' - ' + p.Personality.Description : ''}\n\n`;
+  if (p.Age) t += `## 年代\n${p.Age.Name}${p.Age.Description ? ' - ' + p.Age.Description : ''}\n\n`;
+  if (p.Behaviors?.length) t += `## 行動\n${p.Behaviors.map(b => `- ${b.Name}${b.Description ? ' - ' + b.Description : ''}`).join('\n')}\n\n`;
+  if (p.Restrictions?.length) t += `## 制限\n${p.Restrictions.map(r => `- ${r.Name}${r.Description ? ' - ' + r.Description : ''}`).join('\n')}\n\n`;
+  if (p.Others?.length) t += `## その他\n${p.Others.map(o => `- ${o.Name}${o.Description ? ' - ' + o.Description : ''}`).join('\n')}\n\n`;
+  return t.trim();
+}
+
+function typeLabel(t) { return { appearance: '容姿', personality: '性格', behavior: '行動', age: '年代', restriction: '制限', other: 'その他' }[t] || t; }
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+</script>
 </body>
 </html>
