@@ -552,84 +552,84 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
-// キャラクター詳細をテキスト形式で生成
+// キャラクター詳細をテキスト形式で生成（LLM用フォーマット）
 function generateCharacterText(character) {
     const parts = character.parts || {};
     let text = '';
     
-    text += '='.repeat(50) + '\n';
-    text += `キャラクター名: ${character.CharacterName}\n`;
-    text += '='.repeat(50) + '\n\n';
+    // キャラクター名
+    text += `# ${character.CharacterName}\n\n`;
     
     // 容姿
     if (parts.Appearance) {
-        text += '【容姿】\n';
-        text += `  ${parts.Appearance.Name}\n`;
+        text += `## 容姿\n`;
+        text += `${parts.Appearance.Name}`;
         if (parts.Appearance.Description) {
-            text += `  ${parts.Appearance.Description}\n`;
+            text += ` - ${parts.Appearance.Description}`;
         }
-        text += '\n';
+        text += '\n\n';
     }
     
     // 性格
     if (parts.Personality) {
-        text += '【性格】\n';
-        text += `  ${parts.Personality.Name}\n`;
+        text += `## 性格\n`;
+        text += `${parts.Personality.Name}`;
         if (parts.Personality.Description) {
-            text += `  ${parts.Personality.Description}\n`;
+            text += ` - ${parts.Personality.Description}`;
         }
-        text += '\n';
+        text += '\n\n';
     }
     
     // 年代
     if (parts.Age) {
-        text += '【年代】\n';
-        text += `  ${parts.Age.Name}\n`;
+        text += `## 年代\n`;
+        text += `${parts.Age.Name}`;
         if (parts.Age.Description) {
-            text += `  ${parts.Age.Description}\n`;
+            text += ` - ${parts.Age.Description}`;
         }
-        text += '\n';
+        text += '\n\n';
     }
     
     // 行動
     if (parts.Behaviors && parts.Behaviors.length > 0) {
-        text += '【行動】\n';
+        text += `## 行動\n`;
         parts.Behaviors.forEach(behavior => {
-            text += `  • ${behavior.Name}\n`;
+            text += `- ${behavior.Name}`;
             if (behavior.Description) {
-                text += `    ${behavior.Description}\n`;
+                text += ` - ${behavior.Description}`;
             }
+            text += '\n';
         });
         text += '\n';
     }
     
     // 制限
     if (parts.Restrictions && parts.Restrictions.length > 0) {
-        text += '【制限】\n';
+        text += `## 制限\n`;
         parts.Restrictions.forEach(restriction => {
-            text += `  • ${restriction.Name}\n`;
+            text += `- ${restriction.Name}`;
             if (restriction.Description) {
-                text += `    ${restriction.Description}\n`;
+                text += ` - ${restriction.Description}`;
             }
+            text += '\n';
         });
         text += '\n';
     }
     
     // その他
     if (parts.Others && parts.Others.length > 0) {
-        text += '【その他】\n';
+        text += `## その他\n`;
         parts.Others.forEach(other => {
-            text += `  • ${other.Name}\n`;
+            text += `- ${other.Name}`;
             if (other.Description) {
-                text += `    ${other.Description}\n`;
+                text += ` - ${other.Description}`;
             }
+            text += '\n';
         });
         text += '\n';
     }
     
-    text += '='.repeat(50);
-    
-    return text;
+    return text.trim();
 }
 
 // キャラクター詳細モーダルを表示
