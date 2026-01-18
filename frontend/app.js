@@ -201,6 +201,8 @@ function renderCharacters() {
             </div>
             ${renderCharacterParts(char)}
             <div class="card-actions">
+                <button class="btn-detail" onclick="showCharacterDetail('${char.CharacterID}')">詳細</button>
+                <button class="btn-copy" onclick="copyCharacterText('${char.CharacterID}')">コピー</button>
                 <button class="btn-edit" onclick="editCharacter('${char.CharacterID}')">編集</button>
                 <button class="btn-danger" onclick="deleteCharacter('${char.CharacterID}')">削除</button>
             </div>
@@ -549,4 +551,176 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+// キャラクター詳細をテキスト形式で生成
+function generateCharacterText(character) {
+    const parts = character.parts || {};
+    let text = '';
+    
+    text += '='.repeat(50) + '\n';
+    text += `キャラクター名: ${character.CharacterName}\n`;
+    text += '='.repeat(50) + '\n\n';
+    
+    // 容姿
+    if (parts.Appearance) {
+        text += '【容姿】\n';
+        text += `  ${parts.Appearance.Name}\n`;
+        if (parts.Appearance.Description) {
+            text += `  ${parts.Appearance.Description}\n`;
+        }
+        text += '\n';
+    }
+    
+    // 性格
+    if (parts.Personality) {
+        text += '【性格】\n';
+        text += `  ${parts.Personality.Name}\n`;
+        if (parts.Personality.Description) {
+            text += `  ${parts.Personality.Description}\n`;
+        }
+        text += '\n';
+    }
+    
+    // 年代
+    if (parts.Age) {
+        text += '【年代】\n';
+        text += `  ${parts.Age.Name}\n`;
+        if (parts.Age.Description) {
+            text += `  ${parts.Age.Description}\n`;
+        }
+        text += '\n';
+    }
+    
+    // 行動
+    if (parts.Behaviors && parts.Behaviors.length > 0) {
+        text += '【行動】\n';
+        parts.Behaviors.forEach(behavior => {
+            text += `  • ${behavior.Name}\n`;
+            if (behavior.Description) {
+                text += `    ${behavior.Description}\n`;
+            }
+        });
+        text += '\n';
+    }
+    
+    // 制限
+    if (parts.Restrictions && parts.Restrictions.length > 0) {
+        text += '【制限】\n';
+        parts.Restrictions.forEach(restriction => {
+            text += `  • ${restriction.Name}\n`;
+            if (restriction.Description) {
+                text += `    ${restriction.Description}\n`;
+            }
+        });
+        text += '\n';
+    }
+    
+    // その他
+    if (parts.Others && parts.Others.length > 0) {
+        text += '【その他】\n';
+        parts.Others.forEach(other => {
+            text += `  • ${other.Name}\n`;
+            if (other.Description) {
+                text += `    ${other.Description}\n`;
+            }
+        });
+        text += '\n';
+    }
+    
+    text += '='.repeat(50);
+    
+    return text;
+}
+
+// キャラクター詳細モーダルを表示
+function showCharacterDetail(characterId) {
+    const character = allCharacters.find(c => c.CharacterID === characterId);
+    if (!character) return;
+    
+    const modal = document.getElementById('character-detail-modal');
+    const title = document.getElementById('character-detail-title');
+    const textarea = document.getElementById('character-detail-text');
+    
+    title.textContent = `${character.CharacterName} の詳細`;
+    textarea.value = generateCharacterText(character);
+    
+    modal.classList.add('active');
+}
+
+// キャラクター情報をクリップボードにコピー
+function copyCharacterText(characterId) {
+    const character = allCharacters.find(c => c.CharacterID === characterId);
+    if (!character) return;
+    
+    const text = generateCharacterText(character);
+    
+    // 一時的なテキストエリアを作成してコピー（確実な方法）
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+        document.execCommand('copy');
+        alert('キャラクター情報をコピーしました！');
+    } catch (err) {
+        console.error('コピーに失敗しました:', err);
+        alert('コピーに失敗しました');
+    }
+    
+    document.body.removeChild(textarea);
+}
+
+// 詳細モーダルからのコピー
+document.addEventListener('DOMContentLoaded', () => {
+    // 既存のsetupLoginForm()の後に追加される
+    
+    // コピーボタンのイベントリスナー
+    const copyBtn = document.getElementById('copy-character-btn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const textarea = document.getElementById('character-detail-text');
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                alert('テキストをコピーしました！');
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+                alert('コピーに失敗しました');
+            });
+        });
+    }
+});
+// 詳細モーダルのボタン設定
+function setupDetailModalButtons() {
+    // コピーボタンのイベントリスナー
+    const copyBtn = document.getElementById('copy-character-btn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const textarea = document.getElementById('character-detail-text');
+            if (textarea && textarea.value) {
+                // テキストエリアを選択してコピー
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // モバイル対応
+                
+                try {
+                    document.execCommand('copy');
+                    alert('テキストをコピーしました！');
+                } catch (err) {
+                    console.error('コピーに失敗しました:', err);
+                    alert('コピーに失敗しました');
+                }
+                
+                // 選択を解除
+                window.getSelection().removeAllRanges();
+            }
+        });
+    }
+    
+    // モーダルのクローズボタン
+    document.querySelectorAll('#character-detail-modal .close-btn, #character-detail-modal .cancel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('character-detail-modal').classList.remove('active');
+        });
+    });
 }

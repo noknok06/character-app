@@ -175,6 +175,24 @@
                 </form>
             </div>
         </div>
+    <!-- キャラクター詳細モーダル -->
+    <div id="character-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="character-detail-title">キャラクター詳細</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="character-detail-text" readonly rows="20"></textarea>
+                <div class="modal-actions">
+                    <button id="copy-character-btn" class="btn-primary">
+                        📋 テキストをコピー
+                    </button>
+                    <button class="btn-secondary cancel-btn">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>        
     </div> <!-- app-containerの閉じタグ -->
     <script src="app.js"></script>
 </body>
