@@ -83,12 +83,29 @@ def get_character(character_id):
     
     return response(200, character)
 
+def get_part_info(part_id):
+    """パーツIDから情報を取得"""
+    try:
+        result = parts_table.get_item(Key={'PartID': part_id})
+        return result.get('Item')
+    except:
+        return None
+
 def get_character_parts(character):
     """キャラクターに紐づくパーツ情報を取得"""
     parts = {}
     
-    # 単一選択パーツ
-    for field in ['AppearancePartID', 'PersonalityPartID', 'AgePartID']:
+    # 容姿を複数対応に変更
+    if 'AppearancePartIDs' in character and character['AppearancePartIDs']:
+        appearances_list = []
+        for part_id in character['AppearancePartIDs']:
+            part = get_part_info(part_id)
+            if part:
+                appearances_list.append(part)
+        parts['Appearances'] = appearances_list
+    
+    # 単一選択パーツ（性格、年代）
+    for field in ['PersonalityPartID', 'AgePartID']:
         if field in character and character[field]:
             part = get_part_info(character[field])
             parts[field.replace('PartID', '')] = part
@@ -105,28 +122,18 @@ def get_character_parts(character):
     
     return parts
 
-def get_part_info(part_id):
-    """パーツIDから情報を取得"""
-    try:
-        result = parts_table.get_item(Key={'PartID': part_id})
-        return result.get('Item')
-    except:
-        return None
-
 def create_character(data):
     """キャラクター新規作成"""
-    # 必須項目チェック
     if 'CharacterName' not in data:
         return response(400, {'error': 'CharacterName is required'})
     
-    # 新規キャラクター作成
     character_id = f"char_{uuid.uuid4().hex[:8]}"
     now = datetime.utcnow().isoformat() + 'Z'
     
     item = {
         'CharacterID': character_id,
         'CharacterName': data['CharacterName'],
-        'AppearancePartID': data.get('AppearancePartID', ''),
+        'AppearancePartIDs': data.get('AppearancePartIDs', []),  # 変更
         'PersonalityPartID': data.get('PersonalityPartID', ''),
         'AgePartID': data.get('AgePartID', ''),
         'BehaviorPartIDs': data.get('BehaviorPartIDs', []),
@@ -137,32 +144,27 @@ def create_character(data):
     }
     
     characters_table.put_item(Item=item)
-    
-    # パーツ情報を含めて返す
     item['parts'] = get_character_parts(item)
     
     return response(201, item)
 
 def update_character(character_id, data):
     """キャラクター更新"""
-    # キャラクター存在チェック
     result = characters_table.get_item(Key={'CharacterID': character_id})
     if 'Item' not in result:
         return response(404, {'error': 'Character not found'})
     
-    # 更新可能フィールド
     update_expression = []
     expression_values = {}
-    
     now = datetime.utcnow().isoformat() + 'Z'
     
     if 'CharacterName' in data:
         update_expression.append('CharacterName = :name')
         expression_values[':name'] = data['CharacterName']
     
-    if 'AppearancePartID' in data:
-        update_expression.append('AppearancePartID = :appearance')
-        expression_values[':appearance'] = data['AppearancePartID']
+    if 'AppearancePartIDs' in data:  # 変更
+        update_expression.append('AppearancePartIDs = :appearances')
+        expression_values[':appearances'] = data['AppearancePartIDs']
     
     if 'PersonalityPartID' in data:
         update_expression.append('PersonalityPartID = :personality')
@@ -187,7 +189,6 @@ def update_character(character_id, data):
     update_expression.append('UpdatedAt = :updated')
     expression_values[':updated'] = now
     
-    # 更新実行
     response_data = characters_table.update_item(
         Key={'CharacterID': character_id},
         UpdateExpression='SET ' + ', '.join(update_expression),
@@ -199,7 +200,7 @@ def update_character(character_id, data):
     character['parts'] = get_character_parts(character)
     
     return response(200, character)
-
+    
 def delete_character(character_id):
     """キャラクター削除"""
     # キャラクター存在チェック

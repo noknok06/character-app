@@ -126,6 +126,11 @@ def update_part(part_id, data):
     
     now = datetime.utcnow().isoformat() + 'Z'
     
+    # ★★★ PartTypeの更新を追加 ★★★
+    if 'PartType' in data:
+        update_expression.append('PartType = :type')
+        expression_values[':type'] = data['PartType']
+    
     if 'Name' in data:
         update_expression.append('#name = :name')
         expression_names['#name'] = 'Name'
@@ -139,16 +144,21 @@ def update_part(part_id, data):
     expression_values[':updated'] = now
     
     # 更新実行
-    response_data = table.update_item(
-        Key={'PartID': part_id},
-        UpdateExpression='SET ' + ', '.join(update_expression),
-        ExpressionAttributeNames=expression_names if expression_names else None,
-        ExpressionAttributeValues=expression_values,
-        ReturnValues='ALL_NEW'
-    )
+    update_params = {
+        'Key': {'PartID': part_id},
+        'UpdateExpression': 'SET ' + ', '.join(update_expression),
+        'ExpressionAttributeValues': expression_values,
+        'ReturnValues': 'ALL_NEW'
+    }
+    
+    # ExpressionAttributeNamesは必要な場合のみ追加
+    if expression_names:
+        update_params['ExpressionAttributeNames'] = expression_names
+    
+    response_data = table.update_item(**update_params)
     
     return response(200, response_data['Attributes'])
-
+    
 def delete_part(part_id):
     """パーツ削除"""
     # パーツ存在チェック

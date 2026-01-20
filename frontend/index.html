@@ -11,38 +11,36 @@
       --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #a5b4fc;
       --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-secondary: #64748b;
       --border: #e2e8f0; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b;
+      --favorite: #fbbf24;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: calc(70px + var(--safe-bottom)); overflow-x: hidden; }
     
-    /* ヘッダー */
-    .header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--primary); color: white; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; }
+    .header { position: fixed; top: 0; left: 0; right: 0; z-index: 120; background: var(--primary); color: white; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; }
     .header h1 { font-size: 18px; font-weight: 600; }
     .header-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.15); }
     
-    /* メインコンテンツ */
     .main { padding-top: calc(64px + env(safe-area-inset-top)); padding-bottom: 80px; }
     .screen { display: none; animation: fadeIn 0.2s ease; }
     .screen.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* 検索バー */
-    .search-bar { padding: 12px 16px; position: sticky; top: calc(64px + env(safe-area-inset-top)); background: var(--bg); z-index: 50; }
+    .search-bar { padding: 12px 16px; position: sticky; top: calc(64px + env(safe-area-inset-top)); background: var(--bg); z-index: 40; }
     .search-input { width: 100%; padding: 12px 16px 12px 44px; border: none; border-radius: 12px; background: var(--card); font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .search-input:focus { outline: 2px solid var(--primary); }
     .search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
     
-    /* フィルターチップ */
     .filter-chips { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .filter-chips::-webkit-scrollbar { display: none; }
     .chip { padding: 8px 16px; border-radius: 20px; background: var(--card); border: 1.5px solid var(--border); font-size: 14px; white-space: nowrap; transition: all 0.2s; }
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
     
-    /* カードリスト */
     .card-list { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
     .card { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
+    .card.favorite { border: 2px solid var(--favorite); }
     .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .card-title { font-size: 17px; font-weight: 600; }
+    .favorite-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; background: #fef3c7; color: #b45309; margin-left: 8px; }
     .card-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
     .badge-appearance { background: #fce7f3; color: #be185d; }
     .badge-personality { background: #dbeafe; color: #1d4ed8; }
@@ -51,28 +49,27 @@
     .badge-restriction { background: #fee2e2; color: #dc2626; }
     .badge-other { background: #e5e7eb; color: #4b5563; }
     .card-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
-    .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .card-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .card-note { font-size: 13px; color: var(--warning); margin-top: 8px; font-style: italic; }
+    .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .card-btn { flex: 1; min-width: 80px; padding: 10px; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .btn-edit { background: #fef3c7; color: #b45309; }
     .btn-delete { background: #fee2e2; color: #dc2626; }
     .btn-detail { background: #dbeafe; color: #1d4ed8; }
     .btn-copy { background: #d1fae5; color: #059669; }
+    .btn-favorite { background: #fef3c7; color: #b45309; }
+    .btn-apply { background: #e0e7ff; color: #4f46e5; }
     
-    /* キャラクターカードのパーツ表示 */
     .char-parts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .char-tag { padding: 4px 10px; background: var(--bg); border-radius: 8px; font-size: 12px; color: var(--text-secondary); }
     
-    /* ボトムナビゲーション */
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: var(--safe-bottom); z-index: 100; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; padding-bottom: var(--safe-bottom); z-index: 150; }
     .nav-item { flex: 1; padding: 12px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-secondary); text-decoration: none; font-size: 11px; transition: color 0.2s; }
     .nav-item.active { color: var(--primary); }
     .nav-item i { font-size: 22px; }
     
-    /* FAB */
-    .fab { position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 90; transition: transform 0.2s, box-shadow 0.2s; }
+    .fab { position: fixed; bottom: calc(85px + var(--safe-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 140; transition: transform 0.2s, box-shadow 0.2s; }
     .fab:active { transform: scale(0.95); }
     
-    /* ボトムシート */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; opacity: 0; visibility: hidden; transition: all 0.3s; }
     .overlay.active { opacity: 1; visibility: visible; }
     .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-radius: 24px 24px 0 0; z-index: 201; transform: translateY(100%); transition: transform 0.3s ease; max-height: 90vh; display: flex; flex-direction: column; }
@@ -83,38 +80,33 @@
     .sheet-close { width: 32px; height: 32px; border: none; background: var(--bg); border-radius: 50%; font-size: 18px; color: var(--text-secondary); }
     .sheet-body { padding: 20px; overflow-y: auto; flex: 1; padding-bottom: calc(20px + var(--safe-bottom)); }
     
-    /* フォーム */
-    .form-group { margin-bottom: 20px; }
+    .form-group { margin-bottom: 20px; position: relative; }
     .form-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--text); }
     .form-input, .form-select, .form-textarea { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 16px; background: var(--card); transition: border-color 0.2s; }
     .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
     .form-textarea { resize: none; min-height: 100px; }
+    .clear-btn { position: absolute; right: 8px; top: 38px; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+    .clear-btn:hover { background: var(--border); }
     
-    /* チェックボックスリスト */
     .checkbox-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px; }
     .checkbox-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: 10px; }
     .checkbox-item input { width: 20px; height: 20px; accent-color: var(--primary); }
     
-    /* ボタン */
     .btn-primary { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; margin-top: 10px; }
     .btn-primary:active { background: var(--primary-dark); }
     
-    /* 空状態 */
     .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
     .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state p { font-size: 15px; }
     
-    /* ログイン画面 */
     .login-screen { position: fixed; inset: 0; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
     .login-box { background: white; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 360px; }
     .login-logo { text-align: center; font-size: 48px; margin-bottom: 8px; }
     .login-title { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 24px; }
     .login-error { color: var(--danger); font-size: 14px; text-align: center; margin-top: 12px; min-height: 20px; }
     
-    /* 詳細表示 */
     .detail-text { width: 100%; min-height: 300px; padding: 16px; background: var(--bg); border: none; border-radius: 12px; font-family: monospace; font-size: 14px; line-height: 1.6; resize: none; }
     
-    /* トースト */
     .toast { position: fixed; bottom: calc(100px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(100px); background: var(--text); color: white; padding: 14px 24px; border-radius: 12px; font-size: 14px; z-index: 300; opacity: 0; transition: all 0.3s; }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   </style>
@@ -174,6 +166,15 @@
         </div>
         <div class="card-list" id="charsList"></div>
       </div>
+
+      <!-- お気に入り画面 -->
+      <div class="screen" id="favoritesScreen">
+        <div class="search-bar">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" class="search-input" placeholder="お気に入りを検索..." id="favoritesSearch">
+        </div>
+        <div class="card-list" id="favoritesList"></div>
+      </div>
     </main>
 
     <!-- FAB -->
@@ -183,6 +184,7 @@
     <nav class="bottom-nav">
       <a href="#" class="nav-item active" data-screen="parts"><i class="fas fa-puzzle-piece"></i><span>パーツ</span></a>
       <a href="#" class="nav-item" data-screen="chars"><i class="fas fa-users"></i><span>キャラ</span></a>
+      <a href="#" class="nav-item" data-screen="favorites"><i class="fas fa-star"></i><span>保存済み</span></a>
     </nav>
   </div>
 
@@ -216,6 +218,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">説明（任意）</label>
+          <button type="button" class="clear-btn" onclick="clearPartDesc()"><i class="fas fa-times"></i> クリア</button>
           <textarea class="form-textarea" id="partDesc" placeholder="詳細な説明"></textarea>
         </div>
         <button type="submit" class="btn-primary">保存</button>
@@ -237,16 +240,16 @@
           <input type="text" class="form-input" id="charName" required placeholder="例: 勇者アレックス">
         </div>
         <div class="form-group">
-          <label class="form-label">容姿</label>
-          <select class="form-select" id="charAppearance"><option value="">選択してください</option></select>
+          <label class="form-label">容姿（複数可）</label>
+          <div class="checkbox-list" id="charAppearance"></div>
         </div>
         <div class="form-group">
-          <label class="form-label">性格</label>
-          <select class="form-select" id="charPersonality"><option value="">選択してください</option></select>
+          <label class="form-label">性格（複数可）</label>
+          <div class="checkbox-list" id="charPersonality"></div>
         </div>
         <div class="form-group">
-          <label class="form-label">年代</label>
-          <select class="form-select" id="charAge"><option value="">選択してください</option></select>
+          <label class="form-label">年代（複数可）</label>
+          <div class="checkbox-list" id="charAge"></div>
         </div>
         <div class="form-group">
           <label class="form-label">行動（複数可）</label>
@@ -261,6 +264,28 @@
           <div class="checkbox-list" id="charOthers"></div>
         </div>
         <button type="submit" class="btn-primary">保存</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- お気に入り保存シート -->
+  <div class="bottom-sheet" id="favoriteSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">お気に入りとして保存</span>
+      <button class="sheet-close" onclick="closeSheet('favoriteSheet')">×</button>
+    </div>
+    <div class="sheet-body">
+      <form id="favoriteForm">
+        <div class="form-group">
+          <label class="form-label">保存名（省略可）</label>
+          <input type="text" class="form-input" id="favoriteName" placeholder="例: 初期設定、バージョン2など">
+        </div>
+        <div class="form-group">
+          <label class="form-label">メモ（省略可）</label>
+          <textarea class="form-textarea" id="favoriteNote" placeholder="この設定についてのメモ" style="min-height: 80px;"></textarea>
+        </div>
+        <button type="submit" class="btn-primary"><i class="fas fa-star"></i> 保存</button>
       </form>
     </div>
   </div>
@@ -283,7 +308,7 @@
 
 <script>
 const API_BASE_URL = 'https://5moouwqlbi.execute-api.ap-northeast-1.amazonaws.com/prod';
-let authHeader = '', allParts = [], allCharacters = [], currentFilter = 'all', currentScreen = 'parts', editingPartId = null, editingCharacterId = null;
+let authHeader = '', allParts = [], allCharacters = [], allFavorites = [], currentFilter = 'all', currentScreen = 'parts', editingPartId = null, editingCharacterId = null, savingFavoriteFromId = null;
 
 // 初期化
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -305,20 +330,31 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 });
 
 async function initApp() {
-  await Promise.all([loadParts(), loadCharacters()]);
-  renderParts(); renderCharacters();
+  await Promise.all([loadParts(), loadCharacters(), loadFavorites()]);
+  renderParts(); renderCharacters(); renderFavorites();
   setupEvents();
 }
 
 function setupEvents() {
-  document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    n.classList.add('active');
-    currentScreen = n.dataset.screen;
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(currentScreen + 'Screen').classList.add('active');
-  }));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const targetScreen = this.dataset.screen;
+      
+      // 全てのタブとスクリーンを非アクティブに
+      document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      
+      // クリックされたタブとスクリーンをアクティブに
+      this.classList.add('active');
+      document.getElementById(targetScreen + 'Screen').classList.add('active');
+      
+      // グローバル変数を更新
+      currentScreen = targetScreen;
+    });
+  });
   
   document.querySelectorAll('#partFilters .chip').forEach(c => c.addEventListener('click', () => {
     document.querySelectorAll('#partFilters .chip').forEach(x => x.classList.remove('active'));
@@ -329,13 +365,16 @@ function setupEvents() {
   
   document.getElementById('partsSearch').addEventListener('input', renderParts);
   document.getElementById('charsSearch').addEventListener('input', renderCharacters);
+  document.getElementById('favoritesSearch').addEventListener('input', renderFavorites);
   document.getElementById('fabBtn').addEventListener('click', () => {
     if (currentScreen === 'parts') openPartSheet();
-    else openCharSheet();
+    else if (currentScreen === 'chars') openCharSheet();
+    else toast('お気に入りは既存のキャラクターから保存できます');
   });
   document.getElementById('overlay').addEventListener('click', closeAllSheets);
   document.getElementById('partForm').addEventListener('submit', handlePartSubmit);
   document.getElementById('charForm').addEventListener('submit', handleCharSubmit);
+  document.getElementById('favoriteForm').addEventListener('submit', handleFavoriteSubmit);
 }
 
 async function loadParts() {
@@ -350,7 +389,15 @@ async function loadCharacters() {
   try {
     const res = await fetch(`${API_BASE_URL}/characters`, { headers: { 'Authorization': authHeader } });
     const data = await res.json();
-    allCharacters = data.characters || [];
+    allCharacters = (data.characters || []).filter(c => !c.IsFavorite);
+  } catch (e) { console.error(e); }
+}
+
+async function loadFavorites() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/characters?favorites=true`, { headers: { 'Authorization': authHeader } });
+    const data = await res.json();
+    allFavorites = data.characters || [];
   } catch (e) { console.error(e); }
 }
 
@@ -393,9 +440,9 @@ function renderCharacters() {
   container.innerHTML = filtered.map(c => {
     const parts = c.parts || {};
     let tags = '';
-    if (parts.Appearance) tags += `<span class="char-tag">${esc(parts.Appearance.Name)}</span>`;
-    if (parts.Personality) tags += `<span class="char-tag">${esc(parts.Personality.Name)}</span>`;
-    if (parts.Age) tags += `<span class="char-tag">${esc(parts.Age.Name)}</span>`;
+    if (parts.Appearances?.length) parts.Appearances.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+    if (parts.Personalities?.length) parts.Personalities.forEach(per => tags += `<span class="char-tag">${esc(per.Name)}</span>`);
+    if (parts.Ages?.length) parts.Ages.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
     return `
       <div class="card">
         <div class="card-header"><span class="card-title">${esc(c.CharacterName)}</span></div>
@@ -403,8 +450,45 @@ function renderCharacters() {
         <div class="card-actions">
           <button class="card-btn btn-detail" onclick="showDetail('${c.CharacterID}')"><i class="fas fa-eye"></i></button>
           <button class="card-btn btn-copy" onclick="copyChar('${c.CharacterID}')"><i class="fas fa-copy"></i></button>
+          <button class="card-btn btn-favorite" onclick="openFavoriteSheet('${c.CharacterID}')"><i class="fas fa-star"></i> 保存</button>
           <button class="card-btn btn-edit" onclick="editChar('${c.CharacterID}')"><i class="fas fa-edit"></i></button>
           <button class="card-btn btn-delete" onclick="deleteChar('${c.CharacterID}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderFavorites() {
+  const search = document.getElementById('favoritesSearch').value.toLowerCase();
+  let filtered = allFavorites;
+  if (search) filtered = filtered.filter(c => c.CharacterName.toLowerCase().includes(search) || (c.FavoriteNote || '').toLowerCase().includes(search));
+  
+  const container = document.getElementById('favoritesList');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i><p>保存されたキャラクターがありません</p><p style="margin-top:8px;font-size:13px;">キャラクター画面から「保存」ボタンで保存できます</p></div>';
+    return;
+  }
+  container.innerHTML = filtered.map(c => {
+    const parts = c.parts || {};
+    let tags = '';
+    if (parts.Appearances?.length) parts.Appearances.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+    if (parts.Personalities?.length) parts.Personalities.forEach(per => tags += `<span class="char-tag">${esc(per.Name)}</span>`);
+    if (parts.Ages?.length) parts.Ages.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+    const date = new Date(c.CreatedAt).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="card favorite">
+        <div class="card-header">
+          <span class="card-title">${esc(c.CharacterName)}<span class="favorite-badge"><i class="fas fa-star"></i> 保存済み</span></span>
+        </div>
+        <div class="char-parts">${tags}</div>
+        ${c.FavoriteNote ? `<p class="card-note"><i class="fas fa-sticky-note"></i> ${esc(c.FavoriteNote)}</p>` : ''}
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">保存日時: ${date}</p>
+        <div class="card-actions">
+          <button class="card-btn btn-detail" onclick="showDetail('${c.CharacterID}')"><i class="fas fa-eye"></i></button>
+          <button class="card-btn btn-copy" onclick="copyChar('${c.CharacterID}')"><i class="fas fa-copy"></i></button>
+          <button class="card-btn btn-apply" onclick="applyFavorite('${c.CharacterID}')"><i class="fas fa-download"></i> 適用</button>
+          <button class="card-btn btn-delete" onclick="deleteFavorite('${c.CharacterID}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
     `;
@@ -426,37 +510,70 @@ function openPartSheet(id = null) {
   openSheet('partSheet');
 }
 
+function clearPartDesc() {
+  document.getElementById('partDesc').value = '';
+  toast('説明欄をクリアしました');
+}
+
 function openCharSheet(id = null) {
   editingCharacterId = id;
   document.getElementById('charForm').reset();
   document.getElementById('charSheetTitle').textContent = id ? 'キャラクター編集' : 'キャラクター作成';
+  
+  // まずパーツリストを生成
   populateCharSelects();
+  
+  // 編集モードの場合、データを復元
   if (id) {
-    const c = allCharacters.find(x => x.CharacterID === id);
-    if (c) {
-      document.getElementById('charName').value = c.CharacterName;
-      document.getElementById('charAppearance').value = c.AppearancePartID || '';
-      document.getElementById('charPersonality').value = c.PersonalityPartID || '';
-      document.getElementById('charAge').value = c.AgePartID || '';
-      (c.BehaviorPartIDs || []).forEach(i => { const cb = document.querySelector(`#charBehaviors input[value="${i}"]`); if (cb) cb.checked = true; });
-      (c.RestrictionPartIDs || []).forEach(i => { const cb = document.querySelector(`#charRestrictions input[value="${i}"]`); if (cb) cb.checked = true; });
-      (c.OtherPartIDs || []).forEach(i => { const cb = document.querySelector(`#charOthers input[value="${i}"]`); if (cb) cb.checked = true; });
-    }
+    setTimeout(() => {
+      const c = allCharacters.find(x => x.CharacterID === id);
+      if (c) {
+        document.getElementById('charName').value = c.CharacterName;
+        
+        // 各パーツの設定
+        const partTypes = [
+          { ids: c.AppearancePartIDs || [], selector: '#charAppearance' },
+          { ids: c.PersonalityPartIDs || [], selector: '#charPersonality' },
+          { ids: c.AgePartIDs || [], selector: '#charAge' },
+          { ids: c.BehaviorPartIDs || [], selector: '#charBehaviors' },
+          { ids: c.RestrictionPartIDs || [], selector: '#charRestrictions' },
+          { ids: c.OtherPartIDs || [], selector: '#charOthers' }
+        ];
+        
+        partTypes.forEach(({ ids, selector }) => {
+          ids.forEach(partId => {
+            const cb = document.querySelector(`${selector} input[type="checkbox"][value="${partId}"]`);
+            if (cb) cb.checked = true;
+          });
+        });
+      }
+    }, 100);
   }
+  
   openSheet('charSheet');
 }
 
+function openFavoriteSheet(characterId) {
+  savingFavoriteFromId = characterId;
+  document.getElementById('favoriteForm').reset();
+  const c = allCharacters.find(x => x.CharacterID === characterId);
+  if (c) {
+    document.getElementById('favoriteName').value = c.CharacterName + ' - コピー';
+  }
+  openSheet('favoriteSheet');
+}
+
 function populateCharSelects() {
-  ['charAppearance', 'charPersonality', 'charAge'].forEach((id, i) => {
-    const types = ['appearance', 'personality', 'age'];
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">選択してください</option>' + allParts.filter(p => p.PartType === types[i]).map(p => `<option value="${p.PartID}">${esc(p.Name)}</option>`).join('');
-  });
-  ['charBehaviors:behavior', 'charRestrictions:restriction', 'charOthers:other'].forEach(s => {
+  ['charAppearance:appearance', 'charPersonality:personality', 'charAge:age', 'charBehaviors:behavior', 'charRestrictions:restriction', 'charOthers:other'].forEach(s => {
     const [id, type] = s.split(':');
     const div = document.getElementById(id);
     const parts = allParts.filter(p => p.PartType === type);
-    div.innerHTML = parts.length ? parts.map(p => `<label class="checkbox-item"><input type="checkbox" value="${p.PartID}">${esc(p.Name)}</label>`).join('') : '<p style="color:var(--text-secondary);font-size:13px;">パーツがありません</p>';
+    
+    if (parts.length === 0) {
+      div.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;">パーツがありません</p>';
+    } else {
+      div.innerHTML = parts.map(p => `<label class="checkbox-item"><input type="checkbox" value="${p.PartID}">${esc(p.Name)}</label>`).join('');
+    }
   });
 }
 
@@ -489,21 +606,90 @@ async function handlePartSubmit(e) {
 
 async function handleCharSubmit(e) {
   e.preventDefault();
+  
   const data = {
     CharacterName: document.getElementById('charName').value,
-    AppearancePartID: document.getElementById('charAppearance').value,
-    PersonalityPartID: document.getElementById('charPersonality').value,
-    AgePartID: document.getElementById('charAge').value,
+    AppearancePartIDs: [...document.querySelectorAll('#charAppearance input:checked')].map(c => c.value),
+    PersonalityPartIDs: [...document.querySelectorAll('#charPersonality input:checked')].map(c => c.value),
+    AgePartIDs: [...document.querySelectorAll('#charAge input:checked')].map(c => c.value),
     BehaviorPartIDs: [...document.querySelectorAll('#charBehaviors input:checked')].map(c => c.value),
     RestrictionPartIDs: [...document.querySelectorAll('#charRestrictions input:checked')].map(c => c.value),
     OtherPartIDs: [...document.querySelectorAll('#charOthers input:checked')].map(c => c.value)
   };
+  
   try {
     const url = editingCharacterId ? `${API_BASE_URL}/characters/${editingCharacterId}` : `${API_BASE_URL}/characters`;
     const method = editingCharacterId ? 'PUT' : 'POST';
     await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(data) });
     await loadCharacters(); renderCharacters(); closeAllSheets();
     toast(editingCharacterId ? '更新しました' : '作成しました');
+  } catch { toast('エラーが発生しました'); }
+}
+
+async function handleFavoriteSubmit(e) {
+  e.preventDefault();
+  if (!savingFavoriteFromId) return;
+  
+  const original = allCharacters.find(c => c.CharacterID === savingFavoriteFromId);
+  if (!original) return;
+  
+  const favName = document.getElementById('favoriteName').value || original.CharacterName;
+  const favNote = document.getElementById('favoriteNote').value;
+  
+  const data = {
+    CharacterName: favName,
+    AppearancePartIDs: original.AppearancePartIDs || [],
+    PersonalityPartIDs: original.PersonalityPartIDs || [],
+    AgePartIDs: original.AgePartIDs || [],
+    BehaviorPartIDs: original.BehaviorPartIDs || [],
+    RestrictionPartIDs: original.RestrictionPartIDs || [],
+    OtherPartIDs: original.OtherPartIDs || [],
+    IsFavorite: true,
+    FavoriteNote: favNote
+  };
+  
+  try {
+    await fetch(`${API_BASE_URL}/characters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify(data)
+    });
+    await loadFavorites(); renderFavorites(); closeAllSheets();
+    toast('お気に入りに保存しました');
+  } catch { toast('エラーが発生しました'); }
+}
+
+async function applyFavorite(favoriteId) {
+  if (!confirm('このお気に入りの設定を新しいキャラクターとして作成しますか？')) return;
+  
+  const fav = allFavorites.find(f => f.CharacterID === favoriteId);
+  if (!fav) return;
+  
+  const data = {
+    CharacterName: fav.CharacterName.replace(' - コピー', '').replace('（保存）', '') + ' - 復元',
+    AppearancePartIDs: fav.AppearancePartIDs || [],
+    PersonalityPartIDs: fav.PersonalityPartIDs || [],
+    AgePartIDs: fav.AgePartIDs || [],
+    BehaviorPartIDs: fav.BehaviorPartIDs || [],
+    RestrictionPartIDs: fav.RestrictionPartIDs || [],
+    OtherPartIDs: fav.OtherPartIDs || [],
+    IsFavorite: false
+  };
+  
+  try {
+    await fetch(`${API_BASE_URL}/characters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify(data)
+    });
+    await loadCharacters(); renderCharacters();
+    toast('キャラクターを復元しました');
+    // キャラクター画面に切り替え
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item[data-screen="chars"]').classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('charsScreen').classList.add('active');
+    currentScreen = 'chars';
   } catch { toast('エラーが発生しました'); }
 }
 
@@ -522,8 +708,14 @@ async function deleteChar(id) {
   await loadCharacters(); renderCharacters(); toast('削除しました');
 }
 
+async function deleteFavorite(id) {
+  if (!confirm('このお気に入りを削除しますか？')) return;
+  await fetch(`${API_BASE_URL}/characters/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
+  await loadFavorites(); renderFavorites(); toast('削除しました');
+}
+
 function showDetail(id) {
-  const c = allCharacters.find(x => x.CharacterID === id);
+  const c = [...allCharacters, ...allFavorites].find(x => x.CharacterID === id);
   if (!c) return;
   document.getElementById('detailTitle').textContent = c.CharacterName;
   document.getElementById('detailText').value = genCharText(c);
@@ -531,21 +723,66 @@ function showDetail(id) {
 }
 
 function copyChar(id) {
-  const c = allCharacters.find(x => x.CharacterID === id);
+  const c = [...allCharacters, ...allFavorites].find(x => x.CharacterID === id);
   if (!c) return;
-  navigator.clipboard.writeText(genCharText(c)).then(() => toast('コピーしました'));
+  const text = genCharText(c);
+  
+  // クリップボードにコピー
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast('コピーしました')).catch(() => {
+      // フォールバック
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
 }
 
 function copyDetail() {
-  navigator.clipboard.writeText(document.getElementById('detailText').value).then(() => toast('コピーしました'));
+  const text = document.getElementById('detailText').value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast('コピーしました')).catch(() => {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  textarea.style.top = '0';
+  textarea.style.left = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    toast('コピーしました');
+  } catch (err) {
+    console.error('コピーに失敗しました:', err);
+    toast('コピーに失敗しました');
+  }
+  
+  document.body.removeChild(textarea);
 }
 
 function genCharText(c) {
   const p = c.parts || {};
   let t = `# ${c.CharacterName}\n\n`;
-  if (p.Appearance) t += `## 容姿\n${p.Appearance.Name}${p.Appearance.Description ? ' - ' + p.Appearance.Description : ''}\n\n`;
-  if (p.Personality) t += `## 性格\n${p.Personality.Name}${p.Personality.Description ? ' - ' + p.Personality.Description : ''}\n\n`;
-  if (p.Age) t += `## 年代\n${p.Age.Name}${p.Age.Description ? ' - ' + p.Age.Description : ''}\n\n`;
+  if (p.Appearances?.length) {
+    t += `## 容姿\n${p.Appearances.map(a => `- ${a.Name}${a.Description ? ' - ' + a.Description : ''}`).join('\n')}\n\n`;
+  }
+  if (p.Personalities?.length) {
+    t += `## 性格\n${p.Personalities.map(per => `- ${per.Name}${per.Description ? ' - ' + per.Description : ''}`).join('\n')}\n\n`;
+  }
+  if (p.Ages?.length) {
+    t += `## 年代\n${p.Ages.map(a => `- ${a.Name}${a.Description ? ' - ' + a.Description : ''}`).join('\n')}\n\n`;
+  }
   if (p.Behaviors?.length) t += `## 行動\n${p.Behaviors.map(b => `- ${b.Name}${b.Description ? ' - ' + b.Description : ''}`).join('\n')}\n\n`;
   if (p.Restrictions?.length) t += `## 制限\n${p.Restrictions.map(r => `- ${r.Name}${r.Description ? ' - ' + r.Description : ''}`).join('\n')}\n\n`;
   if (p.Others?.length) t += `## その他\n${p.Others.map(o => `- ${o.Name}${o.Description ? ' - ' + o.Description : ''}`).join('\n')}\n\n`;
