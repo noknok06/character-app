@@ -394,7 +394,7 @@
             position: fixed;
             bottom: calc(85px + var(--safe-bottom));
             right: 20px;
-            z-index: 140;
+            z-index: 210;
             display: flex;
             flex-direction: column-reverse;
             align-items: flex-end;
@@ -570,8 +570,19 @@
             padding: 20px;
             overflow-y: auto;
             flex: 1;
-            padding-bottom: calc(20px + var(--safe-bottom));
+            padding-bottom: 20px;
             -webkit-overflow-scrolling: touch;
+        }
+
+        .sheet-footer {
+            padding: 16px 20px;
+            padding-bottom: calc(16px + var(--safe-bottom));
+            border-top: 1px solid var(--border);
+            background: var(--card);
+        }
+
+        .sheet-footer .btn-primary {
+            margin-top: 0;
         }
 
         .form-group {
@@ -674,7 +685,6 @@
             font-weight: 600;
             margin-top: 10px;
             cursor: pointer;
-            /* display: none; を削除して display: block; に変更 */
             display: block;
         }
 
@@ -740,7 +750,8 @@
 
         .detail-text {
             width: 100%;
-            min-height: 300px;
+            height: 100%;
+            min-height: 250px;
             padding: 16px;
             background: var(--bg);
             border: none;
@@ -839,7 +850,7 @@
                     <label class="form-label">パスワード</label>
                     <input type="password" class="form-input" id="loginPass" required>
                 </div>
-                <button type="submit" class="btn-primary" style="display:block;">ログイン</button>
+                <button type="submit" class="btn-primary">ログイン</button>
                 <p class="login-error" id="loginError"></p>
             </form>
         </div>
@@ -954,11 +965,12 @@
                         クリア</button>
                     <textarea class="form-textarea" id="partDesc" placeholder="詳細な説明"></textarea>
                 </div>
-                <!-- 保存ボタンを追加 -->
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-save"></i> 保存
-                </button>
             </form>
+        </div>
+        <div class="sheet-footer">
+            <button type="submit" form="partForm" class="btn-primary form-submit-btn">
+                <i class="fas fa-save"></i> 保存
+            </button>
         </div>
     </div>
 
@@ -1011,11 +1023,12 @@
                         style="margin-bottom: 8px;">
                     <div class="checkbox-list" id="charOthers"></div>
                 </div>
-                <!-- 保存ボタンを追加 -->
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-save"></i> 保存
-                </button>
             </form>
+        </div>
+        <div class="sheet-footer">
+            <button type="submit" form="charForm" class="btn-primary form-submit-btn">
+                <i class="fas fa-save"></i> 保存
+            </button>
         </div>
     </div>
 
@@ -1037,8 +1050,12 @@
                     <textarea class="form-textarea" id="favoriteNote" placeholder="この設定についてのメモ"
                         style="min-height: 80px;"></textarea>
                 </div>
-                <button type="submit" class="btn-primary" style="display:block;"><i class="fas fa-star"></i> 保存</button>
             </form>
+        </div>
+        <div class="sheet-footer">
+            <button type="submit" form="favoriteForm" class="btn-primary form-submit-btn">
+                <i class="fas fa-star"></i> 保存
+            </button>
         </div>
     </div>
 
@@ -1051,8 +1068,11 @@
         </div>
         <div class="sheet-body">
             <textarea class="detail-text" id="detailText" readonly></textarea>
-            <button class="btn-primary" style="display:block;" onclick="copyDetail()"><i class="fas fa-copy"></i>
-                コピー</button>
+        </div>
+        <div class="sheet-footer">
+            <button class="btn-primary form-submit-btn" onclick="copyDetail()">
+                <i class="fas fa-copy"></i> コピー
+            </button>
         </div>
     </div>
 
@@ -1069,4 +1089,4 @@
     <script src="app.js"></script>
 </body>
 
-</html>Ï
+</html>

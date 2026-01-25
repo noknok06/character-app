@@ -212,9 +212,6 @@ function closeSpeedDial() {
     overlay.classList.remove('active');
 }
 
-// ========================================
-// スピードダイヤル関連（修正版）
-// ========================================
 function enterEditingMode() {
     isEditingMode = true;
     const fabBtn = document.getElementById('fabBtn');
@@ -234,6 +231,11 @@ function enterEditingMode() {
     // スピードダイヤルを自動展開
     speedDial.classList.add('active');
     overlay.classList.add('active');
+    
+    // フォーム内の保存ボタンを非表示
+    document.querySelectorAll('.form-submit-btn').forEach(btn => {
+        btn.style.display = 'none';
+    });
 }
 
 function exitEditingMode() {
@@ -255,6 +257,11 @@ function exitEditingMode() {
     // スピードダイヤルを閉じる
     speedDial.classList.remove('active');
     overlay.classList.remove('active');
+    
+    // フォーム内の保存ボタンを再表示
+    document.querySelectorAll('.form-submit-btn').forEach(btn => {
+        btn.style.display = 'block';
+    });
 }
 
 function cancelEditing() {
