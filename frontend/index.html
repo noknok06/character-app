@@ -599,7 +599,18 @@ async function handlePartSubmit(e) {
     const url = editingPartId ? `${API_BASE_URL}/parts/${editingPartId}` : `${API_BASE_URL}/parts`;
     const method = editingPartId ? 'PUT' : 'POST';
     await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(data) });
-    await loadParts(); renderParts(); closeAllSheets();
+    
+    // ★★★ パーツ更新後、キャラクターとお気に入りも再読み込み ★★★
+    await Promise.all([
+      loadParts(),
+      loadCharacters(),
+      loadFavorites()
+    ]);
+    
+    renderParts(); 
+    renderCharacters();
+    renderFavorites();
+    closeAllSheets();
     toast(editingPartId ? '更新しました' : '作成しました');
   } catch { toast('エラーが発生しました'); }
 }
@@ -699,7 +710,18 @@ function editChar(id) { openCharSheet(id); }
 async function deletePart(id) {
   if (!confirm('削除しますか？')) return;
   await fetch(`${API_BASE_URL}/parts/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
-  await loadParts(); renderParts(); toast('削除しました');
+  
+  // ★★★ パーツ削除後、キャラクターとお気に入りも再読み込み ★★★
+  await Promise.all([
+    loadParts(),
+    loadCharacters(),
+    loadFavorites()
+  ]);
+  
+  renderParts();
+  renderCharacters();
+  renderFavorites();
+  toast('削除しました');
 }
 
 async function deleteChar(id) {
