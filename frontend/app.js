@@ -1,540 +1,984 @@
-// ★★★ ここを自分のAPI URLに書き換える ★★★
-const API_BASE_URL = 'https://5moouwqlbi.execute-api.ap-northeast-1.amazonaws.com/prod';
-
-// 認証情報（ログイン後に設定される）
-let authHeader = '';
-
+// ========================================
 // グローバル変数
+// ========================================
+let authHeader = '';
 let allParts = [];
 let allCharacters = [];
-let currentPartType = 'all';
+let allFavorites = [];
+let currentFilter = 'all';
+let currentScreen = 'parts';
 let editingPartId = null;
 let editingCharacterId = null;
+let savingFavoriteFromId = null;
+let selectedCharacterId = null;
+let isEditingMode = false;
 
+// ========================================
+// API呼び出し（開発/本番モード自動切り替え）
+// ========================================
+async function apiFetch(url, options = {}) {
+    if (CONFIG.DEV_MODE) {
+        // 開発モード: モックAPIを使用
+        return await mockAPI.fetch(url, options);
+    } else {
+        // 本番モード: 実APIを使用
+        const fullUrl = `${CONFIG.API_BASE_URL}${url}`;
+        return await fetch(fullUrl, {
+            ...options,
+            headers: {
+                ...options.headers,
+                'Authorization': authHeader
+            }
+        });
+    }
+}
+
+// ========================================
 // 初期化
+// ========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // 開発モードの場合、バナーを表示
+    if (CONFIG.DEV_MODE) {
+        document.getElementById('devBanner').classList.add('active');
+        console.log('🔧 開発モードで起動しました');
+        
+        // ログインスキップの場合
+        if (CONFIG.SKIP_LOGIN) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            initApp();
+            return;
+        }
+    }
+    
+    // 通常のログインフロー
     setupLoginForm();
 });
 
-// ログインフォームの設定
+// ========================================
+// ログインフォーム設定
+// ========================================
 function setupLoginForm() {
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
-    
-    loginForm.addEventListener('submit', async (e) => {
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const user = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
+        authHeader = 'Basic ' + btoa(user + ':' + pass);
         
-        const username = document.getElementById('login-username').value;
-        const password = document.getElementById('login-password').value;
-        
-        loginError.textContent = '';
-        
-        // 認証ヘッダーを生成
-        authHeader = 'Basic ' + btoa(username + ':' + password);
-        
-        // APIで認証確認
         try {
-            const response = await fetch(`${API_BASE_URL}/parts`, {
-                headers: {
-                    'Authorization': authHeader
-                }
-            });
-            
-            if (response.ok) {
-                // ログイン成功
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-container').style.display = 'block';
-                initializeApp();
+            const res = await apiFetch('/parts');
+            if (res.ok) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                initApp();
             } else {
-                // ログイン失敗
-                loginError.textContent = 'ユーザー名またはパスワードが正しくありません';
+                document.getElementById('loginError').textContent = 'ユーザー名またはパスワードが正しくありません';
                 authHeader = '';
             }
-        } catch (error) {
-            loginError.textContent = '接続エラーが発生しました';
+        } catch {
+            document.getElementById('loginError').textContent = '接続エラーが発生しました';
             authHeader = '';
         }
     });
 }
 
-async function initializeApp() {
-    setupEventListeners();
-    await loadParts();
-    await loadCharacters();
+// ========================================
+// アプリケーション初期化
+// ========================================
+async function initApp() {
+    await Promise.all([loadParts(), loadCharacters(), loadFavorites()]);
     renderParts();
     renderCharacters();
+    renderFavorites();
+    setupEvents();
 }
 
-async function initializeApp() {
-    setupEventListeners();
-    await loadParts();
-    await loadCharacters();
-    renderParts();
-    renderCharacters();
-}
-
+// ========================================
 // イベントリスナー設定
-function setupEventListeners() {
+// ========================================
+function setupEvents() {
     // タブ切り替え
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabName = btn.dataset.tab;
-            switchTab(tabName);
+    document.querySelectorAll('.nav-item').forEach(n => {
+        n.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetScreen = this.dataset.screen;
+            document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById(targetScreen + 'Screen').classList.add('active');
+            currentScreen = targetScreen;
         });
     });
-
-    // パーツ種別タブ
-    document.querySelectorAll('.part-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.part-type-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentPartType = btn.dataset.type;
-            renderParts();
-        });
-    });
-
-    // パーツ作成ボタン
-    document.getElementById('add-part-btn').addEventListener('click', () => {
-        openPartModal();
-    });
-
-    // キャラクター作成ボタン
-    document.getElementById('add-character-btn').addEventListener('click', () => {
-        openCharacterModal();
-    });
-
-    // モーダルクローズ
-    document.querySelectorAll('.close-btn, .cancel-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            closeAllModals();
-        });
-    });
-
-    // フォーム送信
-    document.getElementById('part-form').addEventListener('submit', handlePartSubmit);
-    document.getElementById('character-form').addEventListener('submit', handleCharacterSubmit);
-}
-
-// タブ切り替え
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById(`${tabName}-section`).classList.add('active');
-}
-
-// API呼び出し: パーツ一覧取得
-async function loadParts() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/parts`, {
-            headers: {
-                'Authorization': authHeader
-            }
-        });
-        const data = await response.json();
-        allParts = data.parts || [];
-    } catch (error) {
-        console.error('パーツの読み込みエラー:', error);
-        alert('パーツの読み込みに失敗しました');
-    }
-}
-
-// API呼び出し: キャラクター一覧取得
-async function loadCharacters() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/characters`, {
-            headers: {
-                'Authorization': authHeader
-            }
-        });
-        const data = await response.json();
-        allCharacters = data.characters || [];
-    } catch (error) {
-        console.error('キャラクターの読み込みエラー:', error);
-        alert('キャラクターの読み込みに失敗しました');
-    }
-}
-
-// パーツ一覧表示
-function renderParts() {
-    const container = document.getElementById('parts-list');
-    const filteredParts = currentPartType === 'all' 
-        ? allParts 
-        : allParts.filter(p => p.PartType === currentPartType);
-
-    if (filteredParts.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>パーツがありません</p><p>「+ 新規パーツ作成」ボタンから作成してください</p></div>';
-        return;
-    }
-
-    container.innerHTML = filteredParts.map(part => `
-        <div class="part-card">
-            <div class="part-card-header">
-                <div>
-                    <span class="part-type-badge type-${part.PartType}">${getPartTypeLabel(part.PartType)}</span>
-                    <h3>${escapeHtml(part.Name)}</h3>
-                </div>
-            </div>
-            <p>${escapeHtml(part.Description || '')}</p>
-            <div class="card-actions">
-                <button class="btn-edit" onclick="editPart('${part.PartID}')">編集</button>
-                <button class="btn-danger" onclick="deletePart('${part.PartID}')">削除</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// キャラクター一覧表示
-function renderCharacters() {
-    const container = document.getElementById('characters-list');
-
-    if (allCharacters.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>キャラクターがありません</p><p>「+ 新規キャラクター作成」ボタンから作成してください</p></div>';
-        return;
-    }
-
-    container.innerHTML = allCharacters.map(char => `
-        <div class="character-card">
-            <div class="character-card-header">
-                <h3>${escapeHtml(char.CharacterName)}</h3>
-            </div>
-            ${renderCharacterParts(char)}
-            <div class="card-actions">
-                <button class="btn-detail" onclick="showCharacterDetail('${char.CharacterID}')">詳細</button>
-                <button class="btn-copy" onclick="copyCharacterText('${char.CharacterID}')">コピー</button>
-                <button class="btn-edit" onclick="editCharacter('${char.CharacterID}')">編集</button>
-                <button class="btn-danger" onclick="deleteCharacter('${char.CharacterID}')">削除</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// キャラクターのパーツ情報表示
-function renderCharacterParts(char) {
-    const parts = char.parts || {};
-    let html = '<div class="character-parts">';
-
-    if (parts.Appearance) {
-        html += `<div class="character-parts-item"><strong>容姿:</strong> <span>${escapeHtml(parts.Appearance.Name)}</span></div>`;
-    }
-    if (parts.Personality) {
-        html += `<div class="character-parts-item"><strong>性格:</strong> <span>${escapeHtml(parts.Personality.Name)}</span></div>`;
-    }
-    if (parts.Age) {
-        html += `<div class="character-parts-item"><strong>年代:</strong> <span>${escapeHtml(parts.Age.Name)}</span></div>`;
-    }
-    if (parts.Behaviors && parts.Behaviors.length > 0) {
-        html += `<div class="character-parts-item"><strong>行動:</strong><div class="character-parts-list">`;
-        parts.Behaviors.forEach(b => {
-            html += `<span class="character-parts-tag">${escapeHtml(b.Name)}</span>`;
-        });
-        html += `</div></div>`;
-    }
-    if (parts.Restrictions && parts.Restrictions.length > 0) {
-        html += `<div class="character-parts-item"><strong>制限:</strong><div class="character-parts-list">`;
-        parts.Restrictions.forEach(r => {
-            html += `<span class="character-parts-tag">${escapeHtml(r.Name)}</span>`;
-        });
-        html += `</div></div>`;
-    }
-    if (parts.Others && parts.Others.length > 0) {
-        html += `<div class="character-parts-item"><strong>その他:</strong><div class="character-parts-list">`;
-        parts.Others.forEach(o => {
-            html += `<span class="character-parts-tag">${escapeHtml(o.Name)}</span>`;
-        });
-        html += `</div></div>`;
-    }
-
-    html += '</div>';
-    return html;
-}
-
-// パーツモーダルを開く
-function openPartModal(partId = null) {
-    const modal = document.getElementById('part-modal');
-    const form = document.getElementById('part-form');
-    const title = document.getElementById('part-modal-title');
-
-    form.reset();
-    editingPartId = partId;
-
-    if (partId) {
-        title.textContent = 'パーツ編集';
-        const part = allParts.find(p => p.PartID === partId);
-        if (part) {
-            document.getElementById('part-type').value = part.PartType;
-            document.getElementById('part-name').value = part.Name;
-            document.getElementById('part-description').value = part.Description || '';
-        }
-    } else {
-        title.textContent = 'パーツ作成';
-    }
-
-    modal.classList.add('active');
-}
-
-// キャラクターモーダルを開く
-async function openCharacterModal(characterId = null) {
-    const modal = document.getElementById('character-modal');
-    const form = document.getElementById('character-form');
-    const title = document.getElementById('character-modal-title');
-
-    form.reset();
-    editingCharacterId = characterId;
-
-    // パーツ選択肢を設定
-    populatePartSelects();
-
-    if (characterId) {
-        title.textContent = 'キャラクター編集';
-        const char = allCharacters.find(c => c.CharacterID === characterId);
-        if (char) {
-            document.getElementById('character-name').value = char.CharacterName;
-            document.getElementById('character-appearance').value = char.AppearancePartID || '';
-            document.getElementById('character-personality').value = char.PersonalityPartID || '';
-            document.getElementById('character-age').value = char.AgePartID || '';
-            
-            // 複数選択のチェックボックス
-            (char.BehaviorPartIDs || []).forEach(id => {
-                const checkbox = document.querySelector(`#character-behaviors input[value="${id}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-            (char.RestrictionPartIDs || []).forEach(id => {
-                const checkbox = document.querySelector(`#character-restrictions input[value="${id}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-            (char.OtherPartIDs || []).forEach(id => {
-                const checkbox = document.querySelector(`#character-others input[value="${id}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-        }
-    } else {
-        title.textContent = 'キャラクター作成';
-    }
-
-    modal.classList.add('active');
-}
-
-// パーツ選択肢を設定
-function populatePartSelects() {
-    // 単一選択
-    const appearanceSelect = document.getElementById('character-appearance');
-    const personalitySelect = document.getElementById('character-personality');
-    const ageSelect = document.getElementById('character-age');
-
-    appearanceSelect.innerHTML = '<option value="">選択してください</option>';
-    personalitySelect.innerHTML = '<option value="">選択してください</option>';
-    ageSelect.innerHTML = '<option value="">選択してください</option>';
-
-    allParts.forEach(part => {
-        const option = `<option value="${part.PartID}">${escapeHtml(part.Name)}</option>`;
-        if (part.PartType === 'appearance') appearanceSelect.innerHTML += option;
-        if (part.PartType === 'personality') personalitySelect.innerHTML += option;
-        if (part.PartType === 'age') ageSelect.innerHTML += option;
+    // パーツ種別フィルター
+    document.querySelectorAll('#partFilters .chip').forEach(c => c.addEventListener('click', () => {
+        document.querySelectorAll('#partFilters .chip').forEach(x => x.classList.remove('active'));
+        c.classList.add('active');
+        currentFilter = c.dataset.type;
+        renderParts();
+    }));
+    
+    // 検索
+    document.getElementById('partsSearch').addEventListener('input', renderParts);
+    document.getElementById('charsSearch').addEventListener('input', renderCharacters);
+    document.getElementById('favoritesSearch').addEventListener('input', renderFavorites);
+    
+    // スピードダイヤル
+    setupSpeedDial();
+    
+    // オーバーレイ
+    document.getElementById('overlay').addEventListener('click', closeAllSheets);
+    
+    // フォーム送信（Enterキー対応のため残す）
+    document.getElementById('partForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handlePartSubmit();
     });
-
-    // 複数選択
-    populateMultiSelect('character-behaviors', 'behavior');
-    populateMultiSelect('character-restrictions', 'restriction');
-    populateMultiSelect('character-others', 'other');
-}
-
-// 複数選択チェックボックスを生成
-function populateMultiSelect(containerId, partType) {
-    const container = document.getElementById(containerId);
-    const parts = allParts.filter(p => p.PartType === partType);
-
-    if (parts.length === 0) {
-        container.innerHTML = '<p style="color: #6c757d; font-size: 13px;">このタイプのパーツがまだありません</p>';
-        return;
-    }
-
-    container.innerHTML = parts.map(part => `
-        <label>
-            <input type="checkbox" value="${part.PartID}">
-            ${escapeHtml(part.Name)}
-        </label>
-    `).join('');
-}
-
-// モーダルを閉じる
-function closeAllModals() {
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.classList.remove('active');
+    document.getElementById('charForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleCharSubmit();
     });
+    document.getElementById('favoriteForm').addEventListener('submit', handleFavoriteSubmit);
+}
+
+// ========================================
+// スピードダイヤル関連
+// ========================================
+function setupSpeedDial() {
+    const speedDial = document.getElementById('speedDial');
+    const fabBtn = document.getElementById('fabBtn');
+    const overlay = document.getElementById('speedDialOverlay');
+    const fabSave = document.getElementById('fabSave');
+    const fabCancel = document.getElementById('fabCancel');
+    
+    // メインFABクリック
+    fabBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        if (isEditingMode) {
+            // 編集モード時はスピードダイヤルを展開
+            toggleSpeedDial();
+        } else {
+            // 通常モード時は新規作成
+            if (currentScreen === 'parts') {
+                openPartSheet();
+            } else if (currentScreen === 'chars' || currentScreen === 'favorites') {
+                openCharSheet();
+            }
+        }
+    });
+    
+    // オーバーレイクリック
+    overlay.addEventListener('click', () => {
+        closeSpeedDial();
+    });
+    
+    // 保存ボタン
+    fabSave.addEventListener('click', () => {
+        closeSpeedDial();
+        if (editingPartId) {
+            handlePartSubmit();
+        } else if (editingCharacterId) {
+            handleCharSubmit();
+        }
+    });
+    
+    // キャンセルボタン
+    fabCancel.addEventListener('click', () => {
+        closeSpeedDial();
+        cancelEditing();
+    });
+}
+
+function toggleSpeedDial() {
+    const speedDial = document.getElementById('speedDial');
+    const overlay = document.getElementById('speedDialOverlay');
+    
+    const isActive = speedDial.classList.toggle('active');
+    
+    if (isActive) {
+        overlay.classList.add('active');
+    } else {
+        overlay.classList.remove('active');
+    }
+}
+
+function closeSpeedDial() {
+    const speedDial = document.getElementById('speedDial');
+    const overlay = document.getElementById('speedDialOverlay');
+    
+    speedDial.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+// ========================================
+// スピードダイヤル関連（修正版）
+// ========================================
+function enterEditingMode() {
+    isEditingMode = true;
+    const fabBtn = document.getElementById('fabBtn');
+    const fabSave = document.getElementById('fabSave');
+    const fabCancel = document.getElementById('fabCancel');
+    const speedDial = document.getElementById('speedDial');
+    const overlay = document.getElementById('speedDialOverlay');
+    
+    // FABを編集モードに変更
+    fabBtn.classList.add('editing');
+    fabBtn.querySelector('i').className = 'fas fa-edit';
+    
+    // 保存・キャンセルボタンを表示
+    fabSave.style.display = 'flex';
+    fabCancel.style.display = 'flex';
+    
+    // スピードダイヤルを自動展開
+    speedDial.classList.add('active');
+    overlay.classList.add('active');
+}
+
+function exitEditingMode() {
+    isEditingMode = false;
+    const fabBtn = document.getElementById('fabBtn');
+    const fabSave = document.getElementById('fabSave');
+    const fabCancel = document.getElementById('fabCancel');
+    const speedDial = document.getElementById('speedDial');
+    const overlay = document.getElementById('speedDialOverlay');
+    
+    // FABを通常モードに戻す
+    fabBtn.classList.remove('editing');
+    fabBtn.querySelector('i').className = 'fas fa-plus';
+    
+    // 保存・キャンセルボタンを非表示
+    fabSave.style.display = 'none';
+    fabCancel.style.display = 'none';
+    
+    // スピードダイヤルを閉じる
+    speedDial.classList.remove('active');
+    overlay.classList.remove('active');
+}
+
+function cancelEditing() {
+    closeAllSheets();
+    exitEditingMode();
     editingPartId = null;
     editingCharacterId = null;
 }
 
-// パーツフォーム送信
-async function handlePartSubmit(e) {
-    e.preventDefault();
-
-    const data = {
-        PartType: document.getElementById('part-type').value,
-        Name: document.getElementById('part-name').value,
-        Description: document.getElementById('part-description').value
-    };
-
+// ========================================
+// データ読み込み
+// ========================================
+async function loadParts() {
     try {
-        let response;
-        if (editingPartId) {
-            // 更新
-            response = await fetch(`${API_BASE_URL}/parts/${editingPartId}`, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
-                body: JSON.stringify(data)
-            });
-        } else {
-            // 新規作成
-            response = await fetch(`${API_BASE_URL}/parts`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
-                body: JSON.stringify(data)
-            });
-        }
-
-        if (response.ok) {
-            await loadParts();
-            renderParts();
-            closeAllModals();
-            alert(editingPartId ? 'パーツを更新しました' : 'パーツを作成しました');
-        } else {
-            alert('エラーが発生しました');
-        }
-    } catch (error) {
-        console.error('エラー:', error);
-        alert('エラーが発生しました');
+        const res = await apiFetch('/parts');
+        const data = await res.json();
+        allParts = data.parts || [];
+    } catch (e) {
+        console.error('パーツの読み込みエラー:', e);
     }
 }
 
-// キャラクターフォーム送信
-async function handleCharacterSubmit(e) {
-    e.preventDefault();
-
-    const data = {
-        CharacterName: document.getElementById('character-name').value,
-        AppearancePartID: document.getElementById('character-appearance').value,
-        PersonalityPartID: document.getElementById('character-personality').value,
-        AgePartID: document.getElementById('character-age').value,
-        BehaviorPartIDs: getSelectedCheckboxes('character-behaviors'),
-        RestrictionPartIDs: getSelectedCheckboxes('character-restrictions'),
-        OtherPartIDs: getSelectedCheckboxes('character-others')
-    };
-
+async function loadCharacters() {
     try {
-        let response;
-        if (editingCharacterId) {
-            // 更新
-            response = await fetch(`${API_BASE_URL}/characters/${editingCharacterId}`, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
-                body: JSON.stringify(data)
-            });
-        } else {
-            // 新規作成
-            response = await fetch(`${API_BASE_URL}/characters`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': authHeader
-                },
-                body: JSON.stringify(data)
-            });
-        }
-
-        if (response.ok) {
-            await loadCharacters();
-            renderCharacters();
-            closeAllModals();
-            alert(editingCharacterId ? 'キャラクターを更新しました' : 'キャラクターを作成しました');
-        } else {
-            alert('エラーが発生しました');
-        }
-    } catch (error) {
-        console.error('エラー:', error);
-        alert('エラーが発生しました');
+        const res = await apiFetch('/characters');
+        const data = await res.json();
+        allCharacters = (data.characters || []).map(c => ({ 
+            ...c, 
+            parts: attachPartsToCharacter(c) 
+        }));
+    } catch (e) {
+        console.error('キャラクターの読み込みエラー:', e);
     }
 }
 
-// チェックボックスで選択された値を取得
-function getSelectedCheckboxes(containerId) {
-    const checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`);
-    return Array.from(checkboxes).map(cb => cb.value);
-}
-
-// パーツ編集
-function editPart(partId) {
-    openPartModal(partId);
-}
-
-// パーツ削除
-async function deletePart(partId) {
-    if (!confirm('このパーツを削除してもよろしいですか?')) return;
-
+async function loadFavorites() {
     try {
-        const response = await fetch(`${API_BASE_URL}/parts/${partId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': authHeader
-            }
+        const res = await apiFetch('/characters?favorites=true');
+        const data = await res.json();
+        allFavorites = (data.characters || []).map(c => ({ 
+            ...c, 
+            parts: attachPartsToCharacter(c) 
+        }));
+    } catch (e) {
+        console.error('お気に入りの読み込みエラー:', e);
+    }
+}
+
+// ========================================
+// パーツ情報取得ヘルパー
+// ========================================
+function getPartInfo(partId) {
+    return allParts.find(p => p.PartID === partId);
+}
+
+function attachPartsToCharacter(character) {
+    const parts = {};
+    
+    // 容姿（複数対応）
+    if (character.AppearancePartIDs?.length) {
+        parts.Appearances = character.AppearancePartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    // 性格（複数対応）
+    if (character.PersonalityPartIDs?.length) {
+        parts.Personalities = character.PersonalityPartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    // 年代（複数対応）
+    if (character.AgePartIDs?.length) {
+        parts.Ages = character.AgePartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    // 行動
+    if (character.BehaviorPartIDs?.length) {
+        parts.Behaviors = character.BehaviorPartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    // 制限
+    if (character.RestrictionPartIDs?.length) {
+        parts.Restrictions = character.RestrictionPartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    // その他
+    if (character.OtherPartIDs?.length) {
+        parts.Others = character.OtherPartIDs.map(id => getPartInfo(id)).filter(Boolean);
+    }
+    
+    return parts;
+}
+
+// ========================================
+// レンダリング関数
+// ========================================
+function renderParts() {
+    const search = document.getElementById('partsSearch').value.toLowerCase();
+    let filtered = allParts;
+    
+    // 種別フィルター
+    if (currentFilter !== 'all') {
+        filtered = filtered.filter(p => p.PartType === currentFilter);
+    }
+    
+    // 検索フィルター
+    if (search) {
+        filtered = filtered.filter(p => 
+            p.Name.toLowerCase().includes(search) || 
+            (p.Description || '').toLowerCase().includes(search)
+        );
+    }
+    
+    const container = document.getElementById('partsList');
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-puzzle-piece"></i><p>パーツがありません</p></div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(p => `
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">${esc(p.Name)}</span>
+                <span class="card-badge badge-${p.PartType}">${typeLabel(p.PartType)}</span>
+            </div>
+            ${p.Description ? `<p class="card-desc">${esc(p.Description)}</p>` : ''}
+            <div class="card-actions">
+                <button class="card-btn btn-edit" onclick="editPart('${p.PartID}')"><i class="fas fa-edit"></i> 編集</button>
+                <button class="card-btn btn-delete" onclick="deletePart('${p.PartID}')"><i class="fas fa-trash"></i> 削除</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderCharacters() {
+    const search = document.getElementById('charsSearch').value.toLowerCase();
+    let filtered = allCharacters;
+    
+    // 検索フィルター
+    if (search) {
+        filtered = filtered.filter(c => c.CharacterName.toLowerCase().includes(search));
+    }
+    
+    const container = document.getElementById('charsList');
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>キャラクターがありません</p></div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(c => {
+        const parts = c.parts || {};
+        let tags = '';
+        
+        if (parts.Appearances?.length) {
+            parts.Appearances.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+        }
+        if (parts.Personalities?.length) {
+            parts.Personalities.forEach(per => tags += `<span class="char-tag">${esc(per.Name)}</span>`);
+        }
+        if (parts.Ages?.length) {
+            parts.Ages.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+        }
+        
+        return `
+            <div class="card">
+                <div class="card-header"><span class="card-title">${esc(c.CharacterName)}</span></div>
+                <div class="char-parts">${tags}</div>
+                <div class="card-actions">
+                    <button class="card-btn btn-detail" onclick="showDetail('${c.CharacterID}')"><i class="fas fa-eye"></i></button>
+                    <button class="card-btn btn-copy" onclick="copyChar('${c.CharacterID}')"><i class="fas fa-copy"></i></button>
+                    <button class="card-btn btn-favorite" onclick="openFavoriteSheet('${c.CharacterID}')"><i class="fas fa-star"></i> 保存</button>
+                    <button class="card-btn btn-edit" onclick="editChar('${c.CharacterID}')"><i class="fas fa-edit"></i></button>
+                    <button class="card-btn btn-delete" onclick="deleteChar('${c.CharacterID}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderFavorites() {
+    const search = document.getElementById('favoritesSearch').value.toLowerCase();
+    let filtered = allFavorites;
+    
+    // 検索フィルター
+    if (search) {
+        filtered = filtered.filter(c => 
+            c.CharacterName.toLowerCase().includes(search) || 
+            (c.FavoriteNote || '').toLowerCase().includes(search)
+        );
+    }
+    
+    const container = document.getElementById('favoritesList');
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i><p>保存されたキャラクターがありません</p><p style="margin-top:8px;font-size:13px;">キャラクター画面から「保存」ボタンで保存できます</p></div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(c => {
+        const parts = c.parts || {};
+        let tags = '';
+        
+        if (parts.Appearances?.length) {
+            parts.Appearances.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+        }
+        if (parts.Personalities?.length) {
+            parts.Personalities.forEach(per => tags += `<span class="char-tag">${esc(per.Name)}</span>`);
+        }
+        if (parts.Ages?.length) {
+            parts.Ages.forEach(a => tags += `<span class="char-tag">${esc(a.Name)}</span>`);
+        }
+        
+        const date = new Date(c.CreatedAt).toLocaleString('ja-JP', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit' 
         });
+        
+        return `
+            <div class="card favorite">
+                <div class="card-header">
+                    <span class="card-title">${esc(c.CharacterName)}<span class="favorite-badge"><i class="fas fa-star"></i> 保存済み</span></span>
+                </div>
+                <div class="char-parts">${tags}</div>
+                ${c.FavoriteNote ? `<p class="card-note"><i class="fas fa-sticky-note"></i> ${esc(c.FavoriteNote)}</p>` : ''}
+                <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">保存日時: ${date}</p>
+                <div class="card-actions">
+                    <button class="card-btn btn-detail" onclick="showDetail('${c.CharacterID}')"><i class="fas fa-eye"></i></button>
+                    <button class="card-btn btn-copy" onclick="copyChar('${c.CharacterID}')"><i class="fas fa-copy"></i></button>
+                    <button class="card-btn btn-apply" onclick="applyFavorite('${c.CharacterID}')"><i class="fas fa-download"></i> 適用</button>
+                    <button class="card-btn btn-delete" onclick="deleteFavorite('${c.CharacterID}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-        if (response.ok) {
-            await loadParts();
-            renderParts();
-            alert('パーツを削除しました');
-        } else {
-            alert('削除に失敗しました');
+// ========================================
+// モーダル/シート操作
+// ========================================
+function openPartSheet(id = null) {
+    editingPartId = id;
+    document.getElementById('partForm').reset();
+    document.getElementById('partSheetTitle').textContent = id ? 'パーツ編集' : 'パーツ作成';
+    
+    if (id) {
+        const p = allParts.find(x => x.PartID === id);
+        if (p) {
+            document.getElementById('partType').value = p.PartType;
+            document.getElementById('partName').value = p.Name;
+            document.getElementById('partDesc').value = p.Description || '';
         }
-    } catch (error) {
-        console.error('エラー:', error);
-        alert('エラーが発生しました');
+        // 編集モードに入る
+        enterEditingMode();
     }
+    
+    openSheet('partSheet');
 }
 
-// キャラクター編集
-function editCharacter(characterId) {
-    openCharacterModal(characterId);
+function clearPartDesc() {
+    document.getElementById('partDesc').value = '';
+    toast('説明欄をクリアしました');
 }
 
-// キャラクター削除
-async function deleteCharacter(characterId) {
-    if (!confirm('このキャラクターを削除してもよろしいですか?')) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/characters/${characterId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': authHeader
+function openCharSheet(id = null) {
+    editingCharacterId = id;
+    document.getElementById('charForm').reset();
+    document.getElementById('charSheetTitle').textContent = id ? 'キャラクター編集' : 'キャラクター作成';
+    
+    // パーツ選択肢を生成
+    populateCharSelects();
+    
+    // 編集モードの場合、データを復元
+    if (id) {
+        setTimeout(() => {
+            const c = allCharacters.find(x => x.CharacterID === id);
+            if (c) {
+                document.getElementById('charName').value = c.CharacterName;
+                
+                const partTypes = [
+                    { ids: c.AppearancePartIDs || [], selector: '#charAppearance' },
+                    { ids: c.PersonalityPartIDs || [], selector: '#charPersonality' },
+                    { ids: c.AgePartIDs || [], selector: '#charAge' },
+                    { ids: c.BehaviorPartIDs || [], selector: '#charBehaviors' },
+                    { ids: c.RestrictionPartIDs || [], selector: '#charRestrictions' },
+                    { ids: c.OtherPartIDs || [], selector: '#charOthers' }
+                ];
+                
+                partTypes.forEach(({ ids, selector }) => {
+                    ids.forEach(partId => {
+                        const cb = document.querySelector(`${selector} input[type="checkbox"][value="${partId}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                });
             }
-        });
+        }, 100);
+        
+        // 編集モードに入る
+        enterEditingMode();
+    }
+    
+    openSheet('charSheet');
+}
 
-        if (response.ok) {
-            await loadCharacters();
-            renderCharacters();
-            alert('キャラクターを削除しました');
+function openFavoriteSheet(characterId) {
+    savingFavoriteFromId = characterId;
+    document.getElementById('favoriteForm').reset();
+    
+    const c = allCharacters.find(x => x.CharacterID === characterId);
+    if (c) {
+        document.getElementById('favoriteName').value = c.CharacterName + ' - コピー';
+    }
+    
+    openSheet('favoriteSheet');
+}
+
+function populateCharSelects() {
+    const configs = [
+        { id: 'charAppearance', type: 'appearance', searchId: 'searchAppearance' },
+        { id: 'charPersonality', type: 'personality', searchId: 'searchPersonality' },
+        { id: 'charAge', type: 'age', searchId: 'searchAge' },
+        { id: 'charBehaviors', type: 'behavior', searchId: 'searchBehaviors' },
+        { id: 'charRestrictions', type: 'restriction', searchId: 'searchRestrictions' },
+        { id: 'charOthers', type: 'other', searchId: 'searchOthers' }
+    ];
+    
+    configs.forEach(({ id, type, searchId }) => {
+        const div = document.getElementById(id);
+        const parts = allParts.filter(p => p.PartType === type);
+        
+        if (parts.length === 0) {
+            div.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;grid-column:1/-1;">パーツがありません</p>';
         } else {
-            alert('削除に失敗しました');
+            renderCheckboxList(div, parts);
+            
+            // 検索機能を追加
+            const searchInput = document.getElementById(searchId);
+            if (searchInput) {
+                // 既存のイベントリスナーを削除
+                const newSearchInput = searchInput.cloneNode(true);
+                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+                
+                newSearchInput.addEventListener('input', (e) => {
+                    filterCheckboxList(div, parts, e.target.value);
+                });
+            }
         }
-    } catch (error) {
-        console.error('エラー:', error);
-        alert('エラーが発生しました');
+    });
+}
+
+function renderCheckboxList(container, parts) {
+    container.innerHTML = parts.map(p => `
+        <label class="checkbox-item" data-name="${esc(p.Name).toLowerCase()}" data-desc="${esc(p.Description || '').toLowerCase()}">
+            <input type="checkbox" value="${p.PartID}">
+            ${esc(p.Name)}
+        </label>
+    `).join('');
+}
+
+function filterCheckboxList(container, parts, searchTerm) {
+    const search = searchTerm.toLowerCase();
+    const items = container.querySelectorAll('.checkbox-item');
+    
+    let visibleCount = 0;
+    items.forEach(item => {
+        const name = item.dataset.name || '';
+        const desc = item.dataset.desc || '';
+        
+        if (search === '' || name.includes(search) || desc.includes(search)) {
+            item.style.display = 'flex';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // 検索結果が0件の場合のメッセージ
+    let noResultMsg = container.querySelector('.no-result-message');
+    if (visibleCount === 0) {
+        if (!noResultMsg) {
+            noResultMsg = document.createElement('p');
+            noResultMsg.className = 'no-result-message';
+            noResultMsg.style.cssText = 'color:var(--text-secondary);font-size:13px;grid-column:1/-1;text-align:center;padding:20px;';
+            noResultMsg.textContent = '該当するパーツが見つかりません';
+            container.appendChild(noResultMsg);
+        }
+    } else if (noResultMsg) {
+        noResultMsg.remove();
     }
 }
 
+function openSheet(id) {
+    document.getElementById('overlay').classList.add('active');
+    document.getElementById(id).classList.add('active');
+}
+
+function closeSheet(id) {
+    document.getElementById('overlay').classList.remove('active');
+    document.getElementById(id).classList.remove('active');
+    
+    // シートを閉じたら編集モードを終了
+    exitEditingMode();
+}
+
+function closeAllSheets() {
+    document.getElementById('overlay').classList.remove('active');
+    document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+    
+    // すべてのシートを閉じたら編集モードを終了
+    exitEditingMode();
+}
+
+// ========================================
+// フォーム送信ハンドラ
+// ========================================
+async function handlePartSubmit() {
+    const data = {
+        PartType: document.getElementById('partType').value,
+        Name: document.getElementById('partName').value,
+        Description: document.getElementById('partDesc').value
+    };
+    
+    try {
+        const url = editingPartId ? `/parts/${editingPartId}` : '/parts';
+        const method = editingPartId ? 'PUT' : 'POST';
+        
+        await apiFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        await Promise.all([loadParts(), loadCharacters(), loadFavorites()]);
+        renderParts();
+        renderCharacters();
+        renderFavorites();
+        closeAllSheets();
+        toast(editingPartId ? '更新しました' : '作成しました');
+        
+        editingPartId = null;
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+async function handleCharSubmit() {
+    const data = {
+        CharacterName: document.getElementById('charName').value,
+        AppearancePartIDs: [...document.querySelectorAll('#charAppearance input:checked')].map(c => c.value),
+        PersonalityPartIDs: [...document.querySelectorAll('#charPersonality input:checked')].map(c => c.value),
+        AgePartIDs: [...document.querySelectorAll('#charAge input:checked')].map(c => c.value),
+        BehaviorPartIDs: [...document.querySelectorAll('#charBehaviors input:checked')].map(c => c.value),
+        RestrictionPartIDs: [...document.querySelectorAll('#charRestrictions input:checked')].map(c => c.value),
+        OtherPartIDs: [...document.querySelectorAll('#charOthers input:checked')].map(c => c.value)
+    };
+    
+    try {
+        const url = editingCharacterId ? `/characters/${editingCharacterId}` : '/characters';
+        const method = editingCharacterId ? 'PUT' : 'POST';
+        
+        await apiFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        await loadCharacters();
+        renderCharacters();
+        closeAllSheets();
+        toast(editingCharacterId ? '更新しました' : '作成しました');
+        
+        editingCharacterId = null;
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+async function handleFavoriteSubmit(e) {
+    e.preventDefault();
+    
+    if (!savingFavoriteFromId) return;
+    
+    const original = allCharacters.find(c => c.CharacterID === savingFavoriteFromId);
+    if (!original) return;
+    
+    const favName = document.getElementById('favoriteName').value || original.CharacterName;
+    const favNote = document.getElementById('favoriteNote').value;
+    
+    const data = {
+        CharacterName: favName,
+        AppearancePartIDs: original.AppearancePartIDs || [],
+        PersonalityPartIDs: original.PersonalityPartIDs || [],
+        AgePartIDs: original.AgePartIDs || [],
+        BehaviorPartIDs: original.BehaviorPartIDs || [],
+        RestrictionPartIDs: original.RestrictionPartIDs || [],
+        OtherPartIDs: original.OtherPartIDs || [],
+        IsFavorite: true,
+        FavoriteNote: favNote
+    };
+    
+    try {
+        await apiFetch('/characters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        await loadFavorites();
+        renderFavorites();
+        closeAllSheets();
+        toast('お気に入りに保存しました');
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+// ========================================
+// CRUD操作
+// ========================================
+function editPart(id) {
+    openPartSheet(id);
+}
+
+function editChar(id) {
+    openCharSheet(id);
+}
+
+async function deletePart(id) {
+    if (!confirm('削除しますか？')) return;
+    
+    try {
+        await apiFetch(`/parts/${id}`, { method: 'DELETE' });
+        await Promise.all([loadParts(), loadCharacters(), loadFavorites()]);
+        renderParts();
+        renderCharacters();
+        renderFavorites();
+        toast('削除しました');
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+async function deleteChar(id) {
+    if (!confirm('削除しますか？')) return;
+    
+    try {
+        await apiFetch(`/characters/${id}`, { method: 'DELETE' });
+        await loadCharacters();
+        renderCharacters();
+        toast('削除しました');
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+async function deleteFavorite(id) {
+    if (!confirm('このお気に入りを削除しますか？')) return;
+    
+    try {
+        await apiFetch(`/characters/${id}`, { method: 'DELETE' });
+        await loadFavorites();
+        renderFavorites();
+        toast('削除しました');
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+async function applyFavorite(favoriteId) {
+    if (!confirm('このお気に入りの設定を新しいキャラクターとして作成しますか？')) return;
+    
+    const fav = allFavorites.find(f => f.CharacterID === favoriteId);
+    if (!fav) return;
+    
+    const data = {
+        CharacterName: fav.CharacterName.replace(' - コピー', '').replace('（保存）', '') + ' - 復元',
+        AppearancePartIDs: fav.AppearancePartIDs || [],
+        PersonalityPartIDs: fav.PersonalityPartIDs || [],
+        AgePartIDs: fav.AgePartIDs || [],
+        BehaviorPartIDs: fav.BehaviorPartIDs || [],
+        RestrictionPartIDs: fav.RestrictionPartIDs || [],
+        OtherPartIDs: fav.OtherPartIDs || [],
+        IsFavorite: false
+    };
+    
+    try {
+        await apiFetch('/characters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        await loadCharacters();
+        renderCharacters();
+        toast('キャラクターを復元しました');
+        
+        // キャラクター画面に切り替え
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelector('.nav-item[data-screen="chars"]').classList.add('active');
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('charsScreen').classList.add('active');
+        currentScreen = 'chars';
+    } catch (e) {
+        console.error('エラー:', e);
+        toast('エラーが発生しました');
+    }
+}
+
+// ========================================
+// 詳細表示・コピー機能
+// ========================================
+function showDetail(id) {
+    const c = [...allCharacters, ...allFavorites].find(x => x.CharacterID === id);
+    if (!c) return;
+    
+    document.getElementById('detailTitle').textContent = c.CharacterName;
+    document.getElementById('detailText').value = genCharText(c);
+    openSheet('detailSheet');
+}
+
+function copyChar(id) {
+    const c = [...allCharacters, ...allFavorites].find(x => x.CharacterID === id);
+    if (!c) return;
+    
+    const text = genCharText(c);
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => toast('コピーしました'))
+            .catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function copyDetail() {
+    const text = document.getElementById('detailText').value;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => toast('コピーしました'))
+            .catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    try {
+        document.execCommand('copy');
+        toast('コピーしました');
+    } catch (err) {
+        console.error('コピーに失敗しました:', err);
+        toast('コピーに失敗しました');
+    }
+    
+    document.body.removeChild(textarea);
+}
+
+function genCharText(c) {
+    const p = c.parts || {};
+    let t = `# ${c.CharacterName}\n\n`;
+    
+    if (p.Appearances?.length) {
+        t += `## 容姿\n${p.Appearances.map(a => 
+            `- ${a.Name}${a.Description ? ' - ' + a.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    if (p.Personalities?.length) {
+        t += `## 性格\n${p.Personalities.map(per => 
+            `- ${per.Name}${per.Description ? ' - ' + per.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    if (p.Ages?.length) {
+        t += `## 年代\n${p.Ages.map(a => 
+            `- ${a.Name}${a.Description ? ' - ' + a.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    if (p.Behaviors?.length) {
+        t += `## 行動\n${p.Behaviors.map(b => 
+            `- ${b.Name}${b.Description ? ' - ' + b.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    if (p.Restrictions?.length) {
+        t += `## 制限\n${p.Restrictions.map(r => 
+            `- ${r.Name}${r.Description ? ' - ' + r.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    if (p.Others?.length) {
+        t += `## その他\n${p.Others.map(o => 
+            `- ${o.Name}${o.Description ? ' - ' + o.Description : ''}`
+        ).join('\n')}\n\n`;
+    }
+    
+    return t.trim();
+}
+
+// ========================================
 // ユーティリティ関数
-function getPartTypeLabel(type) {
+// ========================================
+function typeLabel(t) {
     const labels = {
         appearance: '容姿',
         personality: '性格',
@@ -543,184 +987,35 @@ function getPartTypeLabel(type) {
         restriction: '制限',
         other: 'その他'
     };
-    return labels[type] || type;
+    return labels[t] || t;
 }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-// キャラクター詳細をテキスト形式で生成（LLM用フォーマット）
-function generateCharacterText(character) {
-    const parts = character.parts || {};
-    let text = '';
-    
-    // キャラクター名
-    text += `# ${character.CharacterName}\n\n`;
-    
-    // 容姿
-    if (parts.Appearance) {
-        text += `## 容姿\n`;
-        text += `${parts.Appearance.Name}`;
-        if (parts.Appearance.Description) {
-            text += ` - ${parts.Appearance.Description}`;
-        }
-        text += '\n\n';
-    }
-    
-    // 性格
-    if (parts.Personality) {
-        text += `## 性格\n`;
-        text += `${parts.Personality.Name}`;
-        if (parts.Personality.Description) {
-            text += ` - ${parts.Personality.Description}`;
-        }
-        text += '\n\n';
-    }
-    
-    // 年代
-    if (parts.Age) {
-        text += `## 年代\n`;
-        text += `${parts.Age.Name}`;
-        if (parts.Age.Description) {
-            text += ` - ${parts.Age.Description}`;
-        }
-        text += '\n\n';
-    }
-    
-    // 行動
-    if (parts.Behaviors && parts.Behaviors.length > 0) {
-        text += `## 行動\n`;
-        parts.Behaviors.forEach(behavior => {
-            text += `- ${behavior.Name}`;
-            if (behavior.Description) {
-                text += ` - ${behavior.Description}`;
-            }
-            text += '\n';
-        });
-        text += '\n';
-    }
-    
-    // 制限
-    if (parts.Restrictions && parts.Restrictions.length > 0) {
-        text += `## 制限\n`;
-        parts.Restrictions.forEach(restriction => {
-            text += `- ${restriction.Name}`;
-            if (restriction.Description) {
-                text += ` - ${restriction.Description}`;
-            }
-            text += '\n';
-        });
-        text += '\n';
-    }
-    
-    // その他
-    if (parts.Others && parts.Others.length > 0) {
-        text += `## その他\n`;
-        parts.Others.forEach(other => {
-            text += `- ${other.Name}`;
-            if (other.Description) {
-                text += ` - ${other.Description}`;
-            }
-            text += '\n';
-        });
-        text += '\n';
-    }
-    
-    return text.trim();
+function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
 }
 
-// キャラクター詳細モーダルを表示
-function showCharacterDetail(characterId) {
-    const character = allCharacters.find(c => c.CharacterID === characterId);
-    if (!character) return;
-    
-    const modal = document.getElementById('character-detail-modal');
-    const title = document.getElementById('character-detail-title');
-    const textarea = document.getElementById('character-detail-text');
-    
-    title.textContent = `${character.CharacterName} の詳細`;
-    textarea.value = generateCharacterText(character);
-    
-    modal.classList.add('active');
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// キャラクター情報をクリップボードにコピー
-function copyCharacterText(characterId) {
-    const character = allCharacters.find(c => c.CharacterID === characterId);
-    if (!character) return;
-    
-    const text = generateCharacterText(character);
-    
-    // 一時的なテキストエリアを作成してコピー（確実な方法）
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    
-    try {
-        document.execCommand('copy');
-        alert('キャラクター情報をコピーしました！');
-    } catch (err) {
-        console.error('コピーに失敗しました:', err);
-        alert('コピーに失敗しました');
-    }
-    
-    document.body.removeChild(textarea);
-}
-
-// 詳細モーダルからのコピー
-document.addEventListener('DOMContentLoaded', () => {
-    // 既存のsetupLoginForm()の後に追加される
-    
-    // コピーボタンのイベントリスナー
-    const copyBtn = document.getElementById('copy-character-btn');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            const textarea = document.getElementById('character-detail-text');
-            navigator.clipboard.writeText(textarea.value).then(() => {
-                alert('テキストをコピーしました！');
-            }).catch(err => {
-                console.error('コピーに失敗しました:', err);
-                alert('コピーに失敗しました');
-            });
-        });
-    }
-});
-// 詳細モーダルのボタン設定
-function setupDetailModalButtons() {
-    // コピーボタンのイベントリスナー
-    const copyBtn = document.getElementById('copy-character-btn');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            const textarea = document.getElementById('character-detail-text');
-            if (textarea && textarea.value) {
-                // テキストエリアを選択してコピー
-                textarea.select();
-                textarea.setSelectionRange(0, 99999); // モバイル対応
-                
-                try {
-                    document.execCommand('copy');
-                    alert('テキストをコピーしました！');
-                } catch (err) {
-                    console.error('コピーに失敗しました:', err);
-                    alert('コピーに失敗しました');
-                }
-                
-                // 選択を解除
-                window.getSelection().removeAllRanges();
-            }
-        });
-    }
-    
-    // モーダルのクローズボタン
-    document.querySelectorAll('#character-detail-modal .close-btn, #character-detail-modal .cancel-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.getElementById('character-detail-modal').classList.remove('active');
-        });
-    });
-}
+// ========================================
+// グローバルスコープに配置（HTMLから呼ばれる関数）
+// ========================================
+window.editPart = editPart;
+window.deletePart = deletePart;
+window.editChar = editChar;
+window.deleteChar = deleteChar;
+window.deleteFavorite = deleteFavorite;
+window.showDetail = showDetail;
+window.copyChar = copyChar;
+window.copyDetail = copyDetail;
+window.openFavoriteSheet = openFavoriteSheet;
+window.applyFavorite = applyFavorite;
+window.closeSheet = closeSheet;
+window.clearPartDesc = clearPartDesc;
